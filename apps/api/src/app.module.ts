@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
+import { RolesGuard } from './auth/roles.guard.js';
+import { CsrfGuard } from './common/csrf.guard.js';
 import { ENV, EnvModule } from './config/env.module.js';
 import type { Env } from './config/env.js';
 import { buildDataSourceOptions } from './database/data-source.js';
@@ -41,6 +43,11 @@ import { UsersModule } from './users/users.module.js';
     }),
   ],
   controllers: [HealthController],
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    // Order matters: CSRF -> authenticate -> authorize.
+    { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}

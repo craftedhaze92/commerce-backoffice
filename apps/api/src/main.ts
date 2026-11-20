@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { validateEnv } from './config/env.js';
 import { configureApp } from './configure-app.js';
+import { setupSwagger } from './swagger.js';
 
 async function bootstrap() {
   const env = validateEnv(process.env);
@@ -13,11 +13,7 @@ async function bootstrap() {
   configureApp(app, env);
   app.enableCors({ origin: env.WEB_ORIGIN, credentials: true });
 
-  const document = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder().setTitle('Commerce Back-office API').setVersion('0.0.1').build(),
-  );
-  SwaggerModule.setup('api/docs', app, document);
+  setupSwagger(app);
 
   await app.listen(env.PORT);
 }
