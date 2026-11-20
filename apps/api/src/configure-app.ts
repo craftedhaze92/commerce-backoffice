@@ -1,6 +1,7 @@
 import { type INestApplication, ValidationError, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import type { Env } from './config/env.js';
+import { API_PREFIX } from './common/api-prefix.js';
 import { AppException } from './common/app-exception.js';
 import { AllExceptionsFilter } from './common/http-exception.filter.js';
 
@@ -14,7 +15,7 @@ function flatten(errors: ValidationError[], parent = ''): { field: string; messa
 
 /** Shared by main.ts and the e2e harness. Guards are registered via APP_GUARD, not here. */
 export function configureApp(app: INestApplication, _env: Env): void {
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(API_PREFIX);
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({

@@ -1,4 +1,4 @@
-import { hashPassword, normalizeEmail, verifyPassword } from './password.js';
+import { hashPassword, verifyPassword } from './password.js';
 
 describe('password', () => {
   it('verifyPassword true for correct, false for wrong', async () => {
@@ -10,9 +10,5 @@ describe('password', () => {
 
   it('verifyPassword returns false for a malformed hash', async () => {
     expect(await verifyPassword('not-a-hash', 'x')).toBe(false);
-  });
-
-  it('normalizeEmail trims and lowercases', () => {
-    expect(normalizeEmail('  Admin@Demo.COM ')).toBe('admin@demo.com');
   });
 });

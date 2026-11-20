@@ -1,9 +1,10 @@
 import type { Response } from 'express';
+import { API_PREFIX } from '../common/api-prefix.js';
 import type { Env } from '../config/env.js';
 
 export const ACCESS_COOKIE = 'bo_at';
 export const REFRESH_COOKIE = 'bo_rt';
-const REFRESH_PATH = '/api/v1/auth';
+export const REFRESH_PATH = `/${API_PREFIX}/auth`;
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function setAuthCookies(

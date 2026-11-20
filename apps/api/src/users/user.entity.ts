@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { normalizeEmail } from '../auth/password.js';
+import { normalizeEmail } from '../common/email.js';
 
 @Entity('users')
 export class User {

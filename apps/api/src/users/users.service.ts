@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Paginated, UserListItem } from '@bo/contracts';
 import { Repository } from 'typeorm';
-import { normalizeEmail } from '../auth/password.js';
+import { normalizeEmail } from '../common/email.js';
 import { User } from './user.entity.js';
 
 @Injectable()

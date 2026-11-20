@@ -1,9 +1,5 @@
 import argon2 from 'argon2';
 
-export function normalizeEmail(raw: string): string {
-  return raw.trim().toLowerCase();
-}
-
 export function hashPassword(plain: string): Promise<string> {
   return argon2.hash(plain, { type: argon2.argon2id });
 }
