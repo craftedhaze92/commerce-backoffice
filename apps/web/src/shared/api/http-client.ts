@@ -7,11 +7,17 @@ const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/refresh', '/auth/logout'
 
 export type HttpInit = RequestInit & { json?: unknown };
 
-function defaultSessionExpired(): void {
-  // 전체 문서를 새로 불러와 메모리의 인증 상태와 캐시를 비운다(라우터 이동 대신 절대 URL 사용).
+/**
+ * 기본 세션 만료 핸들러: /login으로 전체 이동한다.
+ * 이미 /login 화면이면 이동하지 않는다. 로그인 화면이 인증 API를 부르다 401이 나면
+ * 이동 -> 재로드 -> 401이 무한히 반복되기 때문이다. `/`에서는 next를 붙이지 않는다.
+ */
+export function defaultSessionExpired(): void {
   const { origin, pathname, search } = window.location;
+  if (pathname === '/login' || pathname.startsWith('/login/')) return;
+  // 전체 문서를 새로 불러와 메모리의 인증 상태와 캐시를 비운다(라우터 이동 대신 절대 URL 사용).
   const loginUrl = new URL('/login', origin);
-  loginUrl.searchParams.set('next', pathname + search);
+  if (pathname !== '/') loginUrl.searchParams.set('next', pathname + search);
   window.location.assign(loginUrl);
 }
 
@@ -82,6 +88,9 @@ export function refreshOnce(): Promise<boolean> {
 }
 
 /**
+ * 주의: ReadableStream 같은 일회성 body는 401 재시도 때 다시 보낼 수 없다(string/JSON body만 안전).
+ * 또한 refresh가 이미 끝난 뒤에 도착한 401은 refresh를 한 번 더 일으킨다(토큰이 한 번 더 회전할 뿐 무해).
+ *
  * `/api/v1` 기준 상대 경로로 JSON API를 호출한다.
  * - 2xx: 본문을 JSON으로 파싱해 반환(204면 undefined)
  * - 그 외: ApiError. 본문이 ApiErrorBody가 아니면 code `INTERNAL`
@@ -99,5 +108,10 @@ export async function http<T = unknown>(path: string, init?: HttpInit): Promise<
 
   if (!res.ok) throw await toApiError(res);
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    // 2xx인데 본문이 비었거나 JSON이 아니면 SyntaxError 대신 ApiError로 정규화한다.
+    throw new ApiError(res.status, 'INTERNAL', 'Invalid JSON in successful response');
+  }
 }

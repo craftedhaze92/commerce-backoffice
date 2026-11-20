@@ -1,12 +1,19 @@
 import { http as mswHttp, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/shared/testing/msw-server';
 import { ApiError } from './api-error';
-import { http as httpClient, refreshOnce, setSessionExpiredHandler } from './http-client';
+import {
+  defaultSessionExpired,
+  http as httpClient,
+  refreshOnce,
+  setSessionExpiredHandler,
+} from './http-client';
 
 const UNAUTH = { statusCode: 401, code: 'UNAUTHORIZED', message: 'expired' };
 const noContent = () => new HttpResponse(null, { status: 204 });
 
+// 테스트 순서와 무관하게 기본 핸들러(실제 이동)가 실행되지 않도록 no-op으로 시작한다.
+beforeEach(() => setSessionExpiredHandler(() => {}));
 afterEach(() => setSessionExpiredHandler(() => {}));
 
 describe('http client', () => {
@@ -76,6 +83,19 @@ describe('http client', () => {
     await httpClient('/x', { method: 'POST', json: { a: 1 } });
     expect(body).toEqual({ a: 1 });
     expect(contentType).toBe('application/json');
+  });
+
+  it('maps an empty or non-JSON 2xx body to ApiError INTERNAL', async () => {
+    server.use(
+      mswHttp.get('/api/v1/x', () => new HttpResponse('', { status: 200 })),
+      mswHttp.get('/api/v1/y', () => new HttpResponse('<html>', { status: 200 })),
+    );
+    await expect(httpClient('/x')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 200,
+      code: 'INTERNAL',
+    });
+    await expect(httpClient('/y')).rejects.toBeInstanceOf(ApiError);
   });
 
   it('returns undefined on 204', async () => {
@@ -197,5 +217,43 @@ describe('401 refresh', () => {
     );
     await expect(httpClient('/a')).rejects.toMatchObject({ status: 401 });
     expect(onExpired).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('default session-expired handler', () => {
+  function stubLocation(pathname: string, search = '') {
+    const assign = vi.fn();
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      origin: 'http://localhost:3000',
+      pathname,
+      search,
+      assign,
+    } as unknown as Location);
+    return assign;
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('redirects to /login with the encoded next path', () => {
+    const assign = stubLocation('/orders', '?x=1');
+    defaultSessionExpired();
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(String(assign.mock.calls[0][0])).toBe(
+      'http://localhost:3000/login?next=%2Forders%3Fx%3D1',
+    );
+  });
+
+  it('does not navigate when already on /login (prevents reload loop)', () => {
+    for (const path of ['/login', '/login/reset']) {
+      const assign = stubLocation(path);
+      defaultSessionExpired();
+      expect(assign).not.toHaveBeenCalled();
+    }
+  });
+
+  it('omits next on /', () => {
+    const assign = stubLocation('/');
+    defaultSessionExpired();
+    expect(String(assign.mock.calls[0][0])).toBe('http://localhost:3000/login');
   });
 });
