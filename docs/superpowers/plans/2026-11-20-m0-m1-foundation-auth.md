@@ -37,7 +37,7 @@
 1. **동시에 여러 요청이 401을 받는 경우**: 대시보드처럼 한 화면이 API를 여러 개 동시에 부르다 Access가 만료되면, refresh는 한 번만 호출되고 실패했던 요청은 모두 재시도돼야 한다. → Task 8 `refreshes once for concurrent 401s`
 2. **`next` 파라미터를 악용한 외부 이동**: `/login?next=https://evil.com`이나 `//evil.com`이 들어와도 로그인 후 앱 안쪽(`/dashboard`)으로만 가야 한다. → Task 9 `sanitizeNext`
 3. **비활성화된 사용자의 아직 유효한 JWT**: JWT 만료 전이라도 `isActive=false`면 즉시 401이어야 한다. → Task 6 `rejects deactivated user with valid access token`
-4. **이메일 대소문자·공백**: 앞뒤 공백이 붙은 " Admin@Demo.com "(앞뒤 공백 포함)으로도 `admin@demo.com` 계정에 로그인돼야 한다. 반대로 없는 이메일과 틀린 비밀번호는 같은 응답을 받아 계정 존재 여부가 드러나지 않아야 한다. → Task 4
+4. **이메일 대소문자·공백**: 앞뒤에 공백(스페이스)이 붙은 `Admin@Demo.com` 입력으로도 `admin@demo.com` 계정에 로그인돼야 한다. 반대로 없는 이메일과 틀린 비밀번호는 같은 응답을 받아 계정 존재 여부가 드러나지 않아야 한다. → Task 4
 5. **필수 환경변수 누락**: `JWT_SECRET`이 없거나 32자 미만이면 서버가 기본값으로 뜨지 말고 부팅 단계에서 실패해야 한다. → Task 2 `validateEnv`
 
 ---
