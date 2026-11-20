@@ -46,7 +46,8 @@ export class AuthService {
     if (!refreshRaw) throw new AppException(401, 'UNAUTHORIZED', 'Unauthorized');
     const { userId, next } = await this.refreshTokens.rotate(refreshRaw);
     const user = await this.users.findById(userId);
-    if (!user || !user.isActive) throw new AppException(401, 'UNAUTHORIZED', 'Unauthorized');
+    // rotate() already checked existence/active inside its lock; this only narrows the type.
+    if (!user) throw new AppException(401, 'UNAUTHORIZED', 'Unauthorized');
     return { access: await this.signAccess(user), refreshRaw: next.raw };
   }
 
