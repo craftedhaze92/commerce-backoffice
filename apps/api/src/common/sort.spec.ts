@@ -14,9 +14,12 @@ describe('parseSort', () => {
     expect(parseSort('name:asc', F, FB)).toEqual({ field: 'name', dir: 'asc' });
   });
 
-  it.each(['password:asc', 'name', 'name:up', 'name:asc:x', ''])('rejects %s', (raw) => {
-    expect(() => parseSort(raw, F, FB)).toThrow(AppException);
-  });
+  it.each(['password:asc', 'name', 'name:up', 'name:asc:x', '', 'name:ASC', ' name:asc'])(
+    'rejects %s',
+    (raw) => {
+      expect(() => parseSort(raw, F, FB)).toThrow(AppException);
+    },
+  );
 
   it('reports 400 VALIDATION_FAILED with sort details', () => {
     try {
