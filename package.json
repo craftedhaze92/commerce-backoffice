@@ -10,7 +10,10 @@
     "dev": "pnpm --filter @bo/contracts build && pnpm -r --parallel dev",
     "db:up": "docker compose up -d",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "pnpm --filter api test:e2e",
+    "db:migrate": "pnpm --filter @bo/contracts build && pnpm --filter api build && pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter @bo/contracts build && pnpm --filter api build && pnpm --filter api db:seed"
   },
   "devDependencies": {
     "prettier": "^3.10.1",
