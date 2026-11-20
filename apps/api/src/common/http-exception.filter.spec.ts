@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Logger, type ArgumentsHost } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+  type ArgumentsHost,
+} from '@nestjs/common';
 import { AppException } from './app-exception.js';
 import { AllExceptionsFilter } from './http-exception.filter.js';
 
@@ -35,7 +40,10 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('maps Nest HttpExceptions by status', () => {
-    expect(run(new ForbiddenException()).body).toMatchObject({ statusCode: 403, code: 'FORBIDDEN' });
+    expect(run(new ForbiddenException()).body).toMatchObject({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    });
     expect(run(new BadRequestException(['a', 'b'])).body).toMatchObject({
       code: 'VALIDATION_FAILED',
       message: 'a, b',

@@ -39,7 +39,10 @@ describe('auth cookies', () => {
   ] as const)('clearAuthCookies with NODE_ENV=%s → secure=%s', (nodeEnv, secure) => {
     const { res, asResponse } = mockRes();
     clearAuthCookies(asResponse, env(nodeEnv));
-    expect(res.clearCookie).toHaveBeenCalledWith('bo_at', expect.objectContaining({ path: '/', secure }));
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'bo_at',
+      expect.objectContaining({ path: '/', secure }),
+    );
     expect(res.clearCookie).toHaveBeenCalledWith(
       'bo_rt',
       expect.objectContaining({ path: '/api/v1/auth', secure }),

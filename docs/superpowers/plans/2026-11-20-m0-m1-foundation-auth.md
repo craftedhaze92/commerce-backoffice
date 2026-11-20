@@ -37,7 +37,7 @@
 1. **동시에 여러 요청이 401을 받는 경우**: 대시보드처럼 한 화면이 API를 여러 개 동시에 부르다 Access가 만료되면, refresh는 한 번만 호출되고 실패했던 요청은 모두 재시도돼야 한다. → Task 8 `refreshes once for concurrent 401s`
 2. **`next` 파라미터를 악용한 외부 이동**: `/login?next=https://evil.com`이나 `//evil.com`이 들어와도 로그인 후 앱 안쪽(`/dashboard`)으로만 가야 한다. → Task 9 `sanitizeNext`
 3. **비활성화된 사용자의 아직 유효한 JWT**: JWT 만료 전이라도 `isActive=false`면 즉시 401이어야 한다. → Task 6 `rejects deactivated user with valid access token`
-4. **이메일 대소문자·공백**: ` Admin@Demo.com `으로도 `admin@demo.com` 계정에 로그인돼야 한다. 반대로 없는 이메일과 틀린 비밀번호는 같은 응답을 받아 계정 존재 여부가 드러나지 않아야 한다. → Task 4
+4. **이메일 대소문자·공백**: `Admin@Demo.com`으로도 `admin@demo.com` 계정에 로그인돼야 한다. 반대로 없는 이메일과 틀린 비밀번호는 같은 응답을 받아 계정 존재 여부가 드러나지 않아야 한다. → Task 4
 5. **필수 환경변수 누락**: `JWT_SECRET`이 없거나 32자 미만이면 서버가 기본값으로 뜨지 말고 부팅 단계에서 실패해야 한다. → Task 2 `validateEnv`
 
 ---
@@ -113,11 +113,13 @@ commerce-backoffice/
 ### Task 1: 모노레포·인프라·contracts 패키지
 
 **Files:**
+
 - Create: 루트 `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `.prettierrc.json`(`$MTG/.prettierrc.json` 복사), `.gitignore`, `docker-compose.yml`, `.env.example`
 - Create: `packages/contracts/{package.json,tsconfig.json,tsup.config.ts,vitest.config.ts}`, `src/{role,permission,api,auth,index}.ts`
 - Test: `packages/contracts/src/role.test.ts`, `packages/contracts/src/permission.test.ts`
 
 **Interfaces:**
+
 - Produces (`@bo/contracts`):
   - `enum Role { ADMIN='ADMIN', MANAGER='MANAGER', VIEWER='VIEWER' }`, `ROLE_RANK: Record<Role, number>`
   - `hasRole(actual: Role, required: Role): boolean`
@@ -142,10 +144,15 @@ it('hasRole follows hierarchy', () => {
 });
 // permission.test.ts — 설계 §7.2 표 그대로
 it.each([
-  [Role.VIEWER, 'product:read', true], [Role.VIEWER, 'product:write', false],
-  [Role.VIEWER, 'export:download', false], [Role.MANAGER, 'order:write', true],
-  [Role.MANAGER, 'user:manage', false], [Role.ADMIN, 'user:manage', true],
-])('can(%s, %s) = %s', (role, perm, expected) => expect(can(role, perm as Permission)).toBe(expected));
+  [Role.VIEWER, 'product:read', true],
+  [Role.VIEWER, 'product:write', false],
+  [Role.VIEWER, 'export:download', false],
+  [Role.MANAGER, 'order:write', true],
+  [Role.MANAGER, 'user:manage', false],
+  [Role.ADMIN, 'user:manage', true],
+])('can(%s, %s) = %s', (role, perm, expected) =>
+  expect(can(role, perm as Permission)).toBe(expected),
+);
 ```
 
 - [ ] **Step 3: 실패 확인.** `pnpm --filter @bo/contracts test` → FAIL (모듈 없음)
@@ -159,11 +166,13 @@ it.each([
 ### Task 2: Nest 앱 기반 — 환경변수·DB 연결·에러 필터·e2e 하네스
 
 **Files:**
+
 - Create: `apps/api/` (`pnpm dlx @nestjs/cli new api --package-manager pnpm --skip-git`로 생성한 뒤 예제 컨트롤러는 삭제), `src/config/env.ts`, `src/database/data-source.ts`, `src/common/app-exception.ts`, `src/common/http-exception.filter.ts`, `src/health/health.controller.ts`, `test/jest-e2e.json`, `test/setup-app.ts`
 - Modify: `apps/api/src/main.ts`, `apps/api/src/app.module.ts`
 - Test: `apps/api/src/config/env.spec.ts`, `apps/api/test/health.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: `ErrorCode`, `ApiErrorBody` (Task 1)
 - Produces:
   - `validateEnv(raw: Record<string, unknown>): Env`. `Env = { NODE_ENV: 'development'|'test'|'production'; PORT: number; DATABASE_URL: string; JWT_SECRET: string /* min 32 */; ACCESS_TTL_SEC: number /* 900 */; REFRESH_TTL_SEC: number /* 604800 */; WEB_ORIGIN: string }`. 실패하면 누락·잘못된 키 이름을 담아 throw한다.
@@ -205,11 +214,13 @@ it('validation error → 400 VALIDATION_FAILED with details', ...); // Task 4 �
 ### Task 3: User 엔티티·비밀번호 해시·시드
 
 **Files:**
+
 - Create: `src/users/user.entity.ts`, `src/users/users.service.ts`, `src/users/users.module.ts`, `src/auth/password.ts`, `src/database/migrations/<ts>-CreateUsers.ts`, `src/database/seed.ts`
 - Modify: `apps/api/package.json` 스크립트 `db:migrate`(`typeorm migration:run -d dist/database/data-source.js`), `db:seed`
 - Test: `src/auth/password.spec.ts`, `test/users.e2e-spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `User` 엔티티 (`users` 테이블). `id uuid PK`, `email varchar unique`(항상 소문자로 저장), `passwordHash`, `name`, `role enum(Role)` 기본 VIEWER, `isActive boolean` 기본 true, `createdAt`, `updatedAt`
   - `hashPassword(plain: string): Promise<string>`, `verifyPassword(hash: string, plain: string): Promise<boolean>`
@@ -242,11 +253,13 @@ it('email unique violation', ...); // 같은 이메일 두 번 insert → QueryF
 ### Task 4: 로그인 · me · 로그아웃
 
 **Files:**
+
 - Create: `src/auth/{auth.module,auth.controller,auth.service,auth-cookies,jwt.strategy,jwt-auth.guard,decorators}.ts`, `src/auth/refresh-token.entity.ts`, `src/auth/refresh-token.service.ts`, `src/auth/dto/login.dto.ts`, 마이그레이션 `CreateRefreshTokens`
 - Modify: `app.module.ts`(JwtAuthGuard를 `APP_GUARD`로 등록), `health.controller.ts`(`@Public()`)
 - Test: `test/auth.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: `UsersService`, `verifyPassword`, `normalizeEmail` (Task 3), `MeResponse` (Task 1), `Env`
 - Produces:
   - `RefreshToken` 엔티티: `id uuid`, `userId`, `tokenHash`(sha256 hex), `familyId uuid`, `expiresAt`, `revokedAt nullable`, `replacedById nullable`
@@ -288,10 +301,12 @@ it('logout revokes refresh family and clears cookies', ...); // 이후 POST /aut
 ### Task 5: Refresh Token Rotation과 재사용 탐지
 
 **Files:**
+
 - Modify: `src/auth/auth.controller.ts`, `src/auth/auth.service.ts`, `src/auth/refresh-token.service.ts`
 - Test: `test/auth-refresh.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: Task 4의 `RefreshTokenService`, `setAuthCookies`
 - Produces:
   - `RefreshTokenService.rotate(raw: string): Promise<{ userId: string; next: { raw: string } }>`. 실패하면 `AppException(401, 'UNAUTHORIZED' | 'TOKEN_REUSED')`.
@@ -324,11 +339,13 @@ it('logout revokes refresh family and clears cookies', ...); // Task 4에서 미
 ### Task 6: RBAC Guard · CSRF Guard · 사용자 목록 API
 
 **Files:**
+
 - Create: `src/auth/roles.guard.ts`, `src/common/csrf.guard.ts`, `src/users/users.controller.ts`, `src/users/dto/list-users.query.ts`
 - Modify: `app.module.ts` (전역 가드 순서: Csrf → JwtAuth → Roles), `main.ts` Swagger 설정 (`addCookieAuth('bo_at')`)
 - Test: `test/rbac.e2e-spec.ts`
 
 **Interfaces:**
+
 - Consumes: `hasRole` (Task 1), `@Roles`, `AuthUser` (Task 4), `UsersService.list` (Task 3)
 - Produces:
   - `RolesGuard`: `@Roles(required)` 메타데이터가 없으면 통과, 있으면 `hasRole(user.role, required)`. 실패하면 403 `FORBIDDEN`.
@@ -365,6 +382,7 @@ it('GET /users?size=101 → 400 VALIDATION_FAILED', ...);
 ### Task 7: Next 앱 스캐폴딩 — 물타기 UI·규칙 이식, API 프록시
 
 **Files:**
+
 - Create: `apps/web/` (`pnpm create next-app@latest web --ts --tailwind --eslint --app --no-src-dir --import-alias "@/*"` 후 정리)
 - Copy from `$MTG`:
   - `app/globals.css`. 물타기 전용인 `--color-up`·`--color-down`은 제거하고, `brand`·`canvas`·`subtle` 등 나머지 토큰은 유지한다.
@@ -377,6 +395,7 @@ it('GET /users?size=101 → 400 VALIDATION_FAILED', ...);
 - Test: `src/shared/lib/format-won.test.ts`(복사본이 통과하는지), 빌드
 
 **Interfaces:**
+
 - Produces:
   - `next.config.ts`: `rewrites: [{ source: '/api/:path*', destination: \`${process.env.API_ORIGIN ?? 'http://localhost:4000'}/api/:path*\` }]`, `reactCompiler: true`, `turbopack.root`는 **모노레포 루트**(`path.resolve(__dirname, '../..')`)
   - `apps/web` dependencies에 `@bo/contracts: workspace:*`
@@ -392,11 +411,13 @@ it('GET /users?size=101 → 400 VALIDATION_FAILED', ...);
 ### Task 8: HTTP 클라이언트 — 에러 정규화와 401 단일 refresh
 
 **Files:**
+
 - Create: `src/shared/api/http-client.ts`, `src/shared/api/api-error.ts`, `src/shared/api/mocks/auth.ts`
 - Modify: `src/shared/testing/msw-server.ts` (authHandlers 등록)
 - Test: `src/shared/api/http-client.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ApiErrorBody`, `ErrorCode` (Task 1)
 - Produces:
   - `class ApiError extends Error { status: number; code: ErrorCode; details?: unknown }`
@@ -440,10 +461,12 @@ it('does not try refresh when /auth/login itself returns 401', ...);
 ### Task 9: 세션 엔티티와 로그인 화면
 
 **Files:**
+
 - Create: `src/shared/lib/sanitize-next.ts`, `src/entities/session/{model/query-keys.ts,model/use-me.ts,ui/can.tsx,index.ts}`, `src/features/auth-login/{model/login-schema.ts,ui/login-form.tsx,index.ts}`, `src/views/login/{ui/login-page.tsx,index.ts}`, `app/(auth)/login/page.tsx`
 - Test: `src/shared/lib/sanitize-next.test.ts`, `src/entities/session/ui/can.test.tsx`, `src/features/auth-login/ui/login-form.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `http`, `ApiError` (Task 8), `MeResponse`, `Permission`, `can` (Task 1)
 - Produces:
   - `sanitizeNext(raw: string | null | undefined): string`. `/`로 시작하고 `//`·`/\`로 시작하지 않는 내부 경로만 그대로 돌려주고, 나머지는 `'/dashboard'`.
@@ -481,10 +504,12 @@ it('demo button fills fields without submitting', ...);
 ### Task 10: 라우트 보호 · 어드민 레이아웃 · 사이드바 · 로그아웃 · 403
 
 **Files:**
+
 - Create: `apps/web/proxy.ts`, `src/shared/lib/route-guard.ts`, `src/widgets/admin-sidebar/{lib/menu.ts,ui/admin-sidebar.tsx,index.ts}`, `src/features/auth-logout/{ui/logout-button.tsx,index.ts}`, `src/views/{dashboard,users,forbidden}/…`, `app/(admin)/layout.tsx`, `app/(admin)/dashboard/page.tsx`, `app/(admin)/users/page.tsx`, `app/forbidden/page.tsx`, `app/page.tsx`(`/dashboard`로 redirect)
 - Test: `src/shared/lib/route-guard.test.ts`, `src/widgets/admin-sidebar/lib/menu.test.ts`, `src/features/auth-logout/ui/logout-button.test.tsx`, `src/views/users/ui/users-page.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `useMe`, `Can` (Task 9), `can`, `Permission` (Task 1), `http` (Task 8), `sanitizeNext`
 - Produces:
   - `resolveRouteRedirect(pathname: string, search: string, hasSessionCookie: boolean): string | null`. 보호 경로(`/login` 외 전부, `/_next`·`/api`·정적 파일 제외)인데 쿠키가 없으면 `/login?next=<인코딩된 path+search>`. `/login`인데 쿠키가 있으면 `/dashboard`. 둘 다 아니면 `null`.
@@ -531,10 +556,12 @@ it('UsersPage renders rows from Paginated response', ...);
 ### Task 11: CI와 실행 문서
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`, `README.md`(실행 방법 섹션만. 설계 결정 섹션은 M6)
 - Modify: `.env.example` (`DATABASE_URL`, `JWT_SECRET`, `SEED_PASSWORD`, `WEB_ORIGIN`, `API_ORIGIN` 전부)
 
 **Interfaces:**
+
 - Produces: CI 잡 하나(ubuntu-latest, Node LTS, `pnpm/action-setup`, pnpm store 캐시). 순서는 `pnpm install --frozen-lockfile` → `pnpm --filter @bo/contracts build` → `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm --filter api test:e2e`(ubuntu 러너에 Docker가 있어 Testcontainers 동작) → `pnpm build`
 
 - [ ] **Step 1: 작성.** README 실행 방법은 아래 네 단계다.
@@ -544,6 +571,7 @@ it('UsersPage renders rows from Paginated response', ...);
   4. `pnpm dev`
 
   끝에 데모 계정 표를 붙인다.
+
 - [ ] **Step 2: 로컬 전체 검증.** 저장소를 새 디렉토리에 클론해 README 순서대로만 실행한다. `localhost:3000`에서 admin으로 로그인할 수 있으면 성공이다. 이어서 루트에서 `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter api test:e2e && pnpm build` → 모두 PASS
 - [ ] **Step 3: 커밋.** `chore: CI 워크플로와 로컬 실행 문서 추가`
 - [ ] **Step 4: (GitHub 원격이 있으면) 푸시한 뒤 Actions가 초록색인지 확인**

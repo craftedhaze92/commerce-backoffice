@@ -23,11 +23,7 @@ import { UsersModule } from './users/users.module.js';
         pinoHttp: {
           level: env.NODE_ENV === 'test' ? 'silent' : 'info',
           redact: {
-            paths: [
-              'req.headers.cookie',
-              'req.headers.authorization',
-              'res.headers["set-cookie"]',
-            ],
+            paths: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
             censor: '[Redacted]',
           },
           transport:

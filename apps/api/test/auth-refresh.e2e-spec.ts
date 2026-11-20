@@ -42,7 +42,11 @@ describe('auth refresh (e2e)', () => {
     return c;
   };
   const rawOf = (res: Response, name: string) =>
-    decodeURIComponent(pick(res, name).split(';')[0]!.slice(name.length + 1));
+    decodeURIComponent(
+      pick(res, name)
+        .split(';')[0]!
+        .slice(name.length + 1),
+    );
 
   const loginAs = async (email: string) => {
     const res = await request(server)

@@ -44,9 +44,7 @@ export class RefreshTokenService {
    */
   async rotate(raw: string): Promise<{ userId: string; next: { raw: string } }> {
     type Outcome =
-      | { kind: 'ok'; userId: string; nextRaw: string }
-      | { kind: 'reused' }
-      | { kind: 'invalid' };
+      { kind: 'ok'; userId: string; nextRaw: string } | { kind: 'reused' } | { kind: 'invalid' };
 
     const outcome = await this.repo.manager.transaction(async (manager): Promise<Outcome> => {
       const repo = manager.getRepository(RefreshToken);
