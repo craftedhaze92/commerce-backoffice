@@ -15,19 +15,13 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: minio/minio
+  s3mock:
+    image: adobe/s3mock:4.11.0
     profiles: ['storage']
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: bo-media
     ports:
-      - '9000:9000'
-      - '9001:9001'
-    volumes:
-      - miniodata:/data
+      - '9090:9090'
 
 volumes:
   pgdata:
-  miniodata:

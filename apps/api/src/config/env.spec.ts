@@ -4,13 +4,13 @@ const valid = {
   DATABASE_URL: 'postgresql://bo:bo@localhost:5433/bo',
   JWT_SECRET: 'x'.repeat(32),
   WEB_ORIGIN: 'http://localhost:3000',
+  S3_ACCESS_KEY_ID: 'local',
+  S3_SECRET_ACCESS_KEY: 'local',
 };
 
 describe('validateEnv', () => {
   it('throws when JWT_SECRET is missing', () => {
-    expect(() =>
-      validateEnv({ DATABASE_URL: 'postgres://x', WEB_ORIGIN: 'http://localhost:3000' }),
-    ).toThrow(/JWT_SECRET/);
+    expect(() => validateEnv({ ...valid, JWT_SECRET: undefined })).toThrow(/JWT_SECRET/);
   });
 
   it('throws when JWT_SECRET is shorter than 32 chars', () => {
@@ -28,6 +28,24 @@ describe('validateEnv', () => {
       ACCESS_TTL_SEC: 900,
       REFRESH_TTL_SEC: 604800,
     });
+  });
+
+  it('applies S3 defaults and parses the path-style flag', () => {
+    expect(validateEnv(valid)).toMatchObject({
+      S3_REGION: 'us-east-1',
+      S3_BUCKET: 'bo-media',
+      S3_FORCE_PATH_STYLE: true,
+    });
+    expect(validateEnv(valid).S3_ENDPOINT).toBeUndefined();
+    expect(validateEnv({ ...valid, S3_FORCE_PATH_STYLE: 'false', S3_ENDPOINT: '' })).toMatchObject({
+      S3_FORCE_PATH_STYLE: false,
+    });
+  });
+
+  it('requires S3 credentials', () => {
+    expect(() =>
+      validateEnv({ ...valid, S3_ACCESS_KEY_ID: undefined, S3_SECRET_ACCESS_KEY: undefined }),
+    ).toThrow(/S3_ACCESS_KEY_ID[\s\S]*S3_SECRET_ACCESS_KEY/);
   });
 
   it('coerces numeric strings', () => {
