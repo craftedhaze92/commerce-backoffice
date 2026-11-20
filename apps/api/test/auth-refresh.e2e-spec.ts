@@ -143,6 +143,52 @@ describe('auth refresh (e2e)', () => {
     expect(res.body.code).toBe('UNAUTHORIZED');
   });
 
+  describe('dead refresh token clears both auth cookies', () => {
+    const expectCleared = (res: Response) => {
+      const at = pick(res, 'bo_at');
+      const rt = pick(res, 'bo_rt');
+      expect(at).toMatch(/Path=\/(;|$)/);
+      expect(rt).toMatch(/Path=\/api\/v1\/auth/);
+      for (const c of [at, rt]) {
+        expect(c).toMatch(/^[a-z_]+=;/);
+        expect(c).toMatch(/Expires=Thu, 01 Jan 1970/);
+      }
+    };
+
+    it('TOKEN_REUSED', async () => {
+      const { email } = await newUser();
+      const rt1 = await loginAs(email);
+      await refreshRaw(rt1);
+      const res = await refreshRaw(rt1);
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('TOKEN_REUSED');
+      expectCleared(res);
+    });
+
+    it('unknown token', async () => {
+      const res = await refreshRaw('does-not-exist');
+      expect(res.status).toBe(401);
+      expectCleared(res);
+    });
+
+    it('expired token', async () => {
+      const { email } = await newUser();
+      const rt1 = await loginAs(email);
+      await t.dataSource
+        .getRepository(RefreshToken)
+        .update({ tokenHash: sha(rt1) }, { expiresAt: new Date(Date.now() - 1000) });
+      const res = await refreshRaw(rt1);
+      expect(res.status).toBe(401);
+      expectCleared(res);
+    });
+
+    it('missing cookie', async () => {
+      const res = await refreshRaw();
+      expect(res.status).toBe(401);
+      expectCleared(res);
+    });
+  });
+
   it('refresh for deactivated user → 401 UNAUTHORIZED', async () => {
     const { id, email } = await newUser();
     const rt1 = await loginAs(email);

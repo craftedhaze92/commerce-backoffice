@@ -6,7 +6,7 @@ import type { Env } from '../config/env.js';
 import { UsersService } from '../users/users.service.js';
 import { AuthService, toMe } from './auth.service.js';
 import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from './auth-cookies.js';
-import { type AuthUser, CurrentUser, Public } from './decorators.js';
+import { type AuthUser, CurrentUser, Public } from '../common/decorators.js';
 import { LoginDto } from './dto/login.dto.js';
 import { AppException } from '../common/app-exception.js';
 
@@ -41,10 +41,17 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(204)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
-    const { access, refreshRaw } = await this.auth.refresh(
-      req.cookies?.[REFRESH_COOKIE] as string | undefined,
-    );
-    setAuthCookies(res, access, refreshRaw, this.env);
+    try {
+      const { access, refreshRaw } = await this.auth.refresh(
+        req.cookies?.[REFRESH_COOKIE] as string | undefined,
+      );
+      setAuthCookies(res, access, refreshRaw, this.env);
+    } catch (err) {
+      // Dead refresh token: drop bo_at too, otherwise the web proxy keeps treating the
+      // browser as signed in and bounces /login <-> /dashboard forever.
+      clearAuthCookies(res, this.env);
+      throw err;
+    }
   }
 
   @Public()
