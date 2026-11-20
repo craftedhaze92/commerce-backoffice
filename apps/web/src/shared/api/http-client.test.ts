@@ -251,7 +251,7 @@ describe('default session-expired handler', () => {
     defaultSessionExpired();
     expect(assign).toHaveBeenCalledTimes(1);
     expect(String(assign.mock.calls[0][0])).toBe(
-      'http://localhost:3000/login?next=%2Forders%3Fx%3D1',
+      'http://localhost:3000/login?next=%2Forders%3Fx%3D1&reason=expired',
     );
   });
 
@@ -266,6 +266,6 @@ describe('default session-expired handler', () => {
   it('omits next on /', () => {
     const assign = stubLocation('/');
     defaultSessionExpired();
-    expect(String(assign.mock.calls[0][0])).toBe('http://localhost:3000/login');
+    expect(String(assign.mock.calls[0][0])).toBe('http://localhost:3000/login?reason=expired');
   });
 });

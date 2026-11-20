@@ -11,6 +11,7 @@ export type HttpInit = RequestInit & { json?: unknown };
  * 기본 세션 만료 핸들러: /login으로 전체 이동한다.
  * 이미 /login 화면이면 이동하지 않는다. 로그인 화면이 인증 API를 부르다 401이 나면
  * 이동 -> 재로드 -> 401이 무한히 반복되기 때문이다. `/`에서는 next를 붙이지 않는다.
+ * `reason=expired`는 proxy가 (아직 남은) bo_at 쿠키를 보고 /login을 /dashboard로 되돌리는 루프를 막는다.
  */
 export function defaultSessionExpired(): void {
   const { origin, pathname, search } = window.location;
@@ -18,6 +19,7 @@ export function defaultSessionExpired(): void {
   // 전체 문서를 새로 불러와 메모리의 인증 상태와 캐시를 비운다(라우터 이동 대신 절대 URL 사용).
   const loginUrl = new URL('/login', origin);
   if (pathname !== '/') loginUrl.searchParams.set('next', pathname + search);
+  loginUrl.searchParams.set('reason', 'expired');
   window.location.assign(loginUrl);
 }
 
