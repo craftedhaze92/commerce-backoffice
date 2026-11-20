@@ -5,10 +5,12 @@ import { ENV, EnvModule } from './config/env.module.js';
 import type { Env } from './config/env.js';
 import { buildDataSourceOptions } from './database/data-source.js';
 import { HealthController } from './health/health.controller.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
     EnvModule,
+    UsersModule,
     LoggerModule.forRootAsync({
       inject: [ENV],
       useFactory: (env: Env) => ({

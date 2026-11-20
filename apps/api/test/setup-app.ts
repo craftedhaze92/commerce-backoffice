@@ -22,19 +22,27 @@ export async function createTestApp(): Promise<TestApp> {
     WEB_ORIGIN: 'http://localhost:3000',
   });
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication({ logger: false });
-  configureApp(app, validateEnv(process.env));
-  await app.init();
+  let app: INestApplication | undefined;
+  try {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication({ logger: false });
+    configureApp(app, validateEnv(process.env));
+    await app.init();
+    await app.get(DataSource).runMigrations();
+  } catch (err) {
+    await app?.close().catch(() => undefined);
+    await container.stop();
+    throw err;
+  }
 
   const dataSource = app.get(DataSource);
-  await dataSource.runMigrations();
+  const startedApp = app;
 
   return {
-    app,
+    app: startedApp,
     dataSource,
     async stop() {
-      await app.close();
+      await startedApp.close();
       await container.stop();
     },
   };
