@@ -41,7 +41,9 @@ describe('http client', () => {
   });
 
   it('maps non-JSON error bodies to INTERNAL with the HTTP status', async () => {
-    server.use(mswHttp.get('/api/v1/x', () => new HttpResponse('<html>boom</html>', { status: 502 })));
+    server.use(
+      mswHttp.get('/api/v1/x', () => new HttpResponse('<html>boom</html>', { status: 502 })),
+    );
     await expect(httpClient('/x')).rejects.toMatchObject({ status: 502, code: 'INTERNAL' });
   });
 
@@ -156,9 +158,16 @@ describe('401 refresh', () => {
       mswHttp.get('/api/v1/a', () => HttpResponse.json(UNAUTH, { status: 401 })),
       mswHttp.get('/api/v1/b', () => HttpResponse.json(UNAUTH, { status: 401 })),
     );
-    const results = await Promise.allSettled([httpClient('/a'), httpClient('/b'), httpClient('/a')]);
+    const results = await Promise.allSettled([
+      httpClient('/a'),
+      httpClient('/b'),
+      httpClient('/a'),
+    ]);
     for (const r of results) {
-      expect(r).toMatchObject({ status: 'rejected', reason: { status: 401, code: 'UNAUTHORIZED' } });
+      expect(r).toMatchObject({
+        status: 'rejected',
+        reason: { status: 401, code: 'UNAUTHORIZED' },
+      });
     }
     expect(onExpired).toHaveBeenCalledTimes(1);
   });
@@ -181,20 +190,23 @@ describe('401 refresh', () => {
     expect(refreshCalls).toBe(1);
   });
 
-  it.each(['/auth/login', '/auth/logout'])('does not try refresh when %s returns 401', async (path) => {
-    let refreshCalls = 0;
-    server.use(
-      mswHttp.post('/api/v1/auth/refresh', () => {
-        refreshCalls++;
-        return noContent();
-      }),
-      mswHttp.post(`/api/v1${path}`, () =>
-        HttpResponse.json({ ...UNAUTH, code: 'INVALID_CREDENTIALS' }, { status: 401 }),
-      ),
-    );
-    await expect(httpClient(path, { method: 'POST' })).rejects.toMatchObject({ status: 401 });
-    expect(refreshCalls).toBe(0);
-  });
+  it.each(['/auth/login', '/auth/logout'])(
+    'does not try refresh when %s returns 401',
+    async (path) => {
+      let refreshCalls = 0;
+      server.use(
+        mswHttp.post('/api/v1/auth/refresh', () => {
+          refreshCalls++;
+          return noContent();
+        }),
+        mswHttp.post(`/api/v1${path}`, () =>
+          HttpResponse.json({ ...UNAUTH, code: 'INVALID_CREDENTIALS' }, { status: 401 }),
+        ),
+      );
+      await expect(httpClient(path, { method: 'POST' })).rejects.toMatchObject({ status: 401 });
+      expect(refreshCalls).toBe(0);
+    },
+  );
 
   it('does not recurse when /auth/refresh itself returns 401', async () => {
     let refreshCalls = 0;

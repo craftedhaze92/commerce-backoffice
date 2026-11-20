@@ -84,9 +84,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           autoComplete="username"
           className={FORM_FIELD}
           aria-invalid={errors.email ? true : undefined}
+          aria-describedby={errors.email ? 'login-email-error' : undefined}
           {...register('email')}
         />
-        {errors.email && <span className="text-destructive text-xs">{errors.email.message}</span>}
+        {errors.email && (
+          <span id="login-email-error" role="alert" className="text-destructive text-xs">
+            {errors.email.message}
+          </span>
+        )}
       </div>
       <div className={FORM_LABEL}>
         <Label htmlFor="login-password" className="text-xs font-semibold">
@@ -98,14 +103,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           autoComplete="current-password"
           className={FORM_FIELD}
           aria-invalid={errors.password ? true : undefined}
+          aria-describedby={errors.password ? 'login-password-error' : undefined}
           {...register('password')}
         />
         {errors.password && (
-          <span className="text-destructive text-xs">{errors.password.message}</span>
+          <span id="login-password-error" role="alert" className="text-destructive text-xs">
+            {errors.password.message}
+          </span>
         )}
       </div>
       <Button type="submit" size="lg" disabled={login.isPending}>
-        로그인
+        {login.isPending ? '로그인 중...' : '로그인'}
       </Button>
       <div className="flex flex-col gap-2">
         <span className="text-muted-foreground text-xs">데모 계정</span>

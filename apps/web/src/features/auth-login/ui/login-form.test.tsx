@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
 import { renderWithQuery, createTestQueryClient } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
@@ -71,6 +71,35 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: '로그인' }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(me));
     expect(client.getQueryData(sessionKeys.me)).toEqual(me);
+  });
+
+  it('links field errors to inputs via aria-describedby with role=alert', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<LoginForm onSuccess={() => {}} />);
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+    const emailError = await screen.findByText('이메일 형식이 아닙니다');
+    expect(emailError).toHaveAttribute('role', 'alert');
+    expect(screen.getByLabelText('이메일')).toHaveAttribute('aria-describedby', emailError.id);
+    const pwError = screen.getByText('비밀번호를 입력하세요');
+    expect(pwError).toHaveAttribute('role', 'alert');
+    expect(screen.getByLabelText('비밀번호')).toHaveAttribute('aria-describedby', pwError.id);
+  });
+
+  it('disables submit and shows 로그인 중... while pending', async () => {
+    server.use(
+      http.post('/api/v1/auth/login', async () => {
+        await delay(200);
+        return HttpResponse.json(me);
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<LoginForm onSuccess={() => {}} />);
+    await user.type(screen.getByLabelText('이메일'), 'a@b.com');
+    await user.type(screen.getByLabelText('비밀번호'), 'x');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+    const pending = await screen.findByRole('button', { name: '로그인 중...' });
+    expect(pending).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: '로그인' })).toBeEnabled());
   });
 
   it('demo button fills fields without submitting', async () => {

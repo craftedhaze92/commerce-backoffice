@@ -14,6 +14,21 @@ if (!('ResizeObserver' in globalThis)) {
   };
 }
 
+/** jsdom에는 matchMedia도 없다. Shadcn sidebar의 useIsMobile이 요구하므로 데스크톱(미매치) 스텁을 넣는다. */
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+}
+
 /*
  * MSW 목 서버.
  *
