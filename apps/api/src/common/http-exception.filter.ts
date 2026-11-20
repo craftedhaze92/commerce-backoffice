@@ -39,6 +39,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     host.switchToHttp().getResponse<Response>().status(body.statusCode).json(body);
   }
 
+  /** Any 4xx keeps its real status; unlisted ones (413, 405, 429, ...) fall back to VALIDATION_FAILED. */
+  private clientError(status: number, message: string): ApiErrorBody {
+    const code = STATUS_TO_CODE[status];
+    if (!code) this.logger.warn(`Unmapped ${status} client error: ${message}`);
+    return { statusCode: status, code: code ?? 'VALIDATION_FAILED', message };
+  }
+
   private toBody(exception: unknown): ApiErrorBody {
     if (exception instanceof AppException) {
       const body: ApiErrorBody = {
@@ -52,19 +59,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const code = STATUS_TO_CODE[status];
-      if (code) {
-        return {
-          statusCode: status,
-          code,
-          message: messageOf(exception.getResponse(), exception.message),
-        };
-      }
+      const message = messageOf(exception.getResponse(), exception.message);
+      if (status >= 400 && status < 500) return this.clientError(status, message);
     } else if (isExposedClientError(exception)) {
-      const code = STATUS_TO_CODE[exception.status];
-      if (code) {
-        return { statusCode: exception.status, code, message: exception.message };
-      }
+      return this.clientError(exception.status, exception.message);
     }
 
     // Anything else is a server fault: log the original, never leak it to the client.

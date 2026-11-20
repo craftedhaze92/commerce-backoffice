@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Logger,
   type ArgumentsHost,
 } from '@nestjs/common';
@@ -53,6 +54,23 @@ describe('AllExceptionsFilter', () => {
   it('maps exposed body-parser style client errors', () => {
     const err = Object.assign(new SyntaxError('Unexpected token'), { status: 400, expose: true });
     expect(run(err).body).toMatchObject({ statusCode: 400, code: 'VALIDATION_FAILED' });
+  });
+
+  it('maps unlisted 4xx (e.g. 413) to VALIDATION_FAILED keeping the status, logging a warning', () => {
+    const logWarn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const err = Object.assign(new Error('request entity too large'), { status: 413, expose: true });
+    const { status, body } = run(err);
+    expect(status).toBe(413);
+    expect(body).toMatchObject({ statusCode: 413, code: 'VALIDATION_FAILED' });
+    expect(logWarn).toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
+    const nest = run(new HttpException('slow down', 429));
+    expect(nest.body).toMatchObject({
+      statusCode: 429,
+      code: 'VALIDATION_FAILED',
+      message: 'slow down',
+    });
+    logWarn.mockRestore();
   });
 
   it('hides unknown error messages behind 500 INTERNAL', () => {
