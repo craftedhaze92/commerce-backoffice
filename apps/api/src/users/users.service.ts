@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type { Paginated, UserListItem } from '@bo/contracts';
 import { Repository } from 'typeorm';
 import { normalizeEmail } from '../common/email.js';
+import { toPaginated } from '../common/pagination.js';
 import { User } from './user.entity.js';
 
 @Injectable()
@@ -23,8 +24,8 @@ export class UsersService {
       skip: (page - 1) * size,
       take: size,
     });
-    return {
-      items: rows.map((u) => ({
+    return toPaginated(
+      rows.map((u) => ({
         id: u.id,
         email: u.email,
         name: u.name,
@@ -32,7 +33,9 @@ export class UsersService {
         isActive: u.isActive,
         createdAt: u.createdAt.toISOString(),
       })),
-      meta: { page, size, total, totalPages: Math.ceil(total / size) },
-    };
+      total,
+      page,
+      size,
+    );
   }
 }
