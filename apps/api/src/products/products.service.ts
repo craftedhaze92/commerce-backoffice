@@ -26,16 +26,17 @@ export class ProductsService {
   }
 
   /** One query: category name, inventory and the primary image's thumbKey come along as columns. */
-  private selectRow<T extends ObjectLiteral>(qb: SelectQueryBuilder<T>): SelectQueryBuilder<T> {
-    return qb
-      .select('p.id', 'id')
+  private selectRow<T extends ObjectLiteral>(
+    qb: SelectQueryBuilder<T>,
+    withDescription = false,
+  ): SelectQueryBuilder<T> {
+    qb.select('p.id', 'id')
       .addSelect('p.sku', 'sku')
       .addSelect('p.name', 'name')
       .addSelect('p.categoryId', 'categoryId')
       .addSelect('c.name', 'categoryName')
       .addSelect('p.price', 'price')
       .addSelect('p.status', 'status')
-      .addSelect('p.description', 'description')
       .addSelect('p.createdAt', 'createdAt')
       .addSelect('p.updatedAt', 'updatedAt')
       .addSelect('i.quantity', 'stock')
@@ -52,6 +53,8 @@ export class ProductsService {
             .limit(1),
         'thumbKey',
       );
+    if (withDescription) qb.addSelect('p.description', 'description');
+    return qb;
   }
 
   async list(q: ListProductsQuery): Promise<Paginated<ProductListItem>> {
@@ -64,7 +67,7 @@ export class ProductsService {
   }
 
   async get(id: string): Promise<ProductDetail> {
-    const row = await this.selectRow(this.baseQuery())
+    const row = await this.selectRow(this.baseQuery(), true)
       .where('p.id = :id', { id })
       .andWhere('p.deletedAt IS NULL')
       .getRawOne<ProductRow>();

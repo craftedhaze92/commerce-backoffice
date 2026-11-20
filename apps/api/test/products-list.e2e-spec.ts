@@ -174,6 +174,17 @@ describe('products list + detail (e2e)', () => {
     expect(skus(await list('?q=%20%20'))).toHaveLength(3);
   });
 
+  it('empty or whitespace price params are treated as absent', async () => {
+    await make({ sku: 'P-1', price: 100 });
+    await make({ sku: 'P-2', price: 0 });
+    for (const qs of ['maxPrice=', 'minPrice=%20', 'minPrice=&maxPrice=%20%20']) {
+      const res = await list(`?${qs}`);
+      expect(res.status).toBe(200);
+      expect((res.body as Paginated<ProductListItem>).meta.total).toBe(2);
+    }
+    expect(skus(await list('?maxPrice=%200%20'))).toEqual(['P-2']);
+  });
+
   it('q treats % and _ literally', async () => {
     await make({ sku: 'SKU-1', name: 'A_B' });
     await make({ sku: 'SKU-2', name: 'AXB' });
@@ -189,6 +200,10 @@ describe('products list + detail (e2e)', () => {
     'status=FOO',
     'minPrice=-1',
     'minPrice=500&maxPrice=100',
+    'maxPrice=0x10',
+    'minPrice=1e3',
+    'minPrice=1.5',
+    'maxPrice=100000001',
     'size=101',
     'categoryId=x',
     'lowStock=yes',

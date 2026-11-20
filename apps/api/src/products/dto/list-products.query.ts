@@ -1,4 +1,4 @@
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -6,11 +6,20 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import { ProductStatus } from '@bo/contracts';
+import { PRODUCT_LIMITS, ProductStatus } from '@bo/contracts';
 import { PaginationQuery } from '../../common/pagination.js';
+
+/** Empty/whitespace -> absent; digits only -> number; anything else stays a string and fails @IsInt. */
+const toPrice = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const t = value.trim();
+  if (t === '') return undefined;
+  return /^\d+$/.test(t) ? Number(t) : value;
+};
 
 export class ListProductsQuery extends PaginationQuery {
   /** Trimmed; empty after trimming means "no search". */
@@ -33,15 +42,17 @@ export class ListProductsQuery extends PaginationQuery {
   status?: ProductStatus;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toPrice)
   @IsInt()
   @Min(0)
+  @Max(PRODUCT_LIMITS.maxPrice)
   minPrice?: number;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(toPrice)
   @IsInt()
   @Min(0)
+  @Max(PRODUCT_LIMITS.maxPrice)
   maxPrice?: number;
 
   @IsOptional()
