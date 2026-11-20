@@ -7,7 +7,7 @@
 - 모노레포: pnpm workspace (Node 24)
 - API: NestJS 12 (ESM), TypeORM, PostgreSQL 16, Vitest + Testcontainers
 - Web: Next.js 16, Tailwind CSS
-- 공용 계약: `@bo/contracts` (Zod 스키마, tsup 빌드)
+- 공용 계약: `@bo/contracts` (API·Web이 함께 쓰는 TS 타입·enum, tsup 빌드)
 - 인프라: docker compose (PostgreSQL, MinIO)
 - CI: GitHub Actions
 
@@ -31,7 +31,7 @@ pnpm dev
 
 `http://localhost:3000`에서 아래 데모 계정으로 로그인할 수 있다.
 
-> `pnpm db:up`은 PostgreSQL만 띄운다. MinIO는 M2(이미지 업로드)부터 필요하며 `pnpm db:up:storage`로 함께 기동한다.
+> `pnpm db:up`은 PostgreSQL만 띄우고 헬스체크가 통과할 때까지 기다린 뒤 반환한다(`docker compose up -d --wait`). MinIO는 M2(이미지 업로드)부터 필요하며 `pnpm db:up:storage`로 함께 기동한다.
 
 > PostgreSQL 호스트 포트는 로컬 Postgres(5432)와 겹치지 않도록 **5433**(`PG_PORT`)을 쓴다. 포트를 바꾸면 `.env`의 `DATABASE_URL`도 함께 바꾼다.
 
@@ -43,7 +43,9 @@ pnpm dev
 | manager@demo.com | MANAGER | `demo1234!` |
 | viewer@demo.com  | VIEWER  | `demo1234!` |
 
-비밀번호는 `.env`의 `SEED_PASSWORD`로 바꿀 수 있다.
+비밀번호는 `.env`의 `SEED_PASSWORD`로 바꿀 수 있다. 로그인 화면의 데모 계정 버튼은 고정 비밀번호 `demo1234!`를 쓰므로, 이를 바꾸면 버튼 로그인은 실패한다(기본 `SEED_PASSWORD`와 일치).
+
+> Web의 `/api/v1` 프록시 대상 `API_ORIGIN`은 Next가 `apps/web/.env*`에서 읽는다. 루트 `.env`는 Next가 로드하지 않으며, 기본값(`http://localhost:4000`)이 로컬 API와 일치하므로 보통 설정할 필요가 없다.
 
 ## 주요 스크립트
 
@@ -70,4 +72,4 @@ pnpm dev
 
 TODO (M6에서 정리)
 
-- 감수한 트레이드오프: 같은 refresh 토큰으로 두 탭이 동시에 갱신을 요청하면 재사용으로 간주되어 로그아웃된다.
+- 감수한 트레이드오프: 같은 refresh 토큰으로 두 탭이 동시에 갱신을 요청하면 재사용으로 간주되어 토큰 패밀리가 폐기된다. 이때 API가 인증 쿠키를 모두 삭제하고, 뒤처진 탭은 access 토큰(최대 15분)이 만료되는 시점에 `/login?reason=expired`로 이동한다. 리다이렉트 루프는 생기지 않는다.
