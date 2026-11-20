@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: bo
       POSTGRES_PASSWORD: bo
     ports:
-      - '5432:5432'
+      - '${PG_PORT:-5433}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
