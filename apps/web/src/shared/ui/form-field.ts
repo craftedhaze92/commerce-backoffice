@@ -1,9 +1,8 @@
 /**
  * 폼 입력칸 공통 스타일.
  *
- * 종목 추가/수정 폼(entities/holding)과 물타기 시뮬레이터(widgets/averaging-panel)가 같은
- * 시안 스펙을 쓴다. 두 곳은 서로 import할 수 없는 레이어라, 각자 문자열을 들고 있으면
- * 한쪽만 고쳐져 입력칸 모양이 갈라진다.
+ * 여러 레이어의 폼(entities, widgets 등)이 같은 시안 스펙을 쓴다. 레이어끼리는 서로
+ * import할 수 없어서, 각자 문자열을 들고 있으면 한쪽만 고쳐져 입력칸 모양이 갈라진다.
  *
  * Shadcn `Input`·`SelectTrigger`의 기본 스타일 위에 cn()으로 덮어쓴다.
  */
