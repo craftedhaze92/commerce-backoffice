@@ -9,6 +9,7 @@
     "test": "pnpm -r test",
     "dev": "pnpm --filter @bo/contracts build && pnpm -r --parallel dev",
     "db:up": "docker compose up -d",
+    "db:up:storage": "docker compose --profile storage up -d",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:e2e": "pnpm --filter api test:e2e",

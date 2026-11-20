@@ -31,6 +31,8 @@ pnpm dev
 
 `http://localhost:3000`에서 아래 데모 계정으로 로그인할 수 있다.
 
+> `pnpm db:up`은 PostgreSQL만 띄운다. MinIO는 M2(이미지 업로드)부터 필요하며 `pnpm db:up:storage`로 함께 기동한다.
+
 > PostgreSQL 호스트 포트는 로컬 Postgres(5432)와 겹치지 않도록 **5433**(`PG_PORT`)을 쓴다. 포트를 바꾸면 `.env`의 `DATABASE_URL`도 함께 바꾼다.
 
 ### 데모 계정
@@ -45,19 +47,20 @@ pnpm dev
 
 ## 주요 스크립트
 
-| 명령                | 설명                                         |
-| ------------------- | -------------------------------------------- |
-| `pnpm dev`          | contracts 빌드 후 api·web 개발 서버 실행     |
-| `pnpm build`        | 전체 워크스페이스 빌드                       |
-| `pnpm lint`         | 전체 린트                                    |
-| `pnpm typecheck`    | 전체 타입 검사                               |
-| `pnpm test`         | 단위 테스트                                  |
-| `pnpm test:e2e`     | API e2e 테스트 (Testcontainers, Docker 필요) |
-| `pnpm db:up`        | docker compose로 PostgreSQL·MinIO 기동       |
-| `pnpm db:migrate`   | DB 마이그레이션 적용(API 빌드 포함)          |
-| `pnpm db:seed`      | 데모 계정 시드(API 빌드 포함)                |
-| `pnpm format`       | Prettier 포맷 적용                           |
-| `pnpm format:check` | 포맷 검사 (CI에서 사용)                      |
+| 명령                 | 설명                                            |
+| -------------------- | ----------------------------------------------- |
+| `pnpm dev`           | contracts 빌드 후 api·web 개발 서버 실행        |
+| `pnpm build`         | 전체 워크스페이스 빌드                          |
+| `pnpm lint`          | 전체 린트                                       |
+| `pnpm typecheck`     | 전체 타입 검사                                  |
+| `pnpm test`          | 단위 테스트                                     |
+| `pnpm test:e2e`      | API e2e 테스트 (Testcontainers, Docker 필요)    |
+| `pnpm db:up`         | docker compose로 PostgreSQL·MinIO 기동          |
+| `pnpm db:up:storage` | MinIO까지 함께 기동 (M2 이미지 업로드부터 필요) |
+| `pnpm db:migrate`    | DB 마이그레이션 적용(API 빌드 포함)             |
+| `pnpm db:seed`       | 데모 계정 시드(API 빌드 포함)                   |
+| `pnpm format`        | Prettier 포맷 적용                              |
+| `pnpm format:check`  | 포맷 검사 (CI에서 사용)                         |
 
 ## 설계 문서
 
