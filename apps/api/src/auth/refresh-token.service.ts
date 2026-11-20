@@ -5,7 +5,7 @@ import { EntityManager, IsNull, Repository } from 'typeorm';
 import { AppException } from '../common/app-exception.js';
 import { ENV } from '../config/env.module.js';
 import type { Env } from '../config/env.js';
-import { UsersService } from '../users/users.service.js';
+import { User } from '../users/user.entity.js';
 import { RefreshToken } from './refresh-token.entity.js';
 
 export const hashToken = (raw: string): string => createHash('sha256').update(raw).digest('hex');
@@ -15,7 +15,6 @@ export class RefreshTokenService {
   constructor(
     @InjectRepository(RefreshToken) private readonly repo: Repository<RefreshToken>,
     @Inject(ENV) private readonly env: Env,
-    private readonly users: UsersService,
   ) {}
 
   async issue(
@@ -61,7 +60,7 @@ export class RefreshTokenService {
         return { kind: 'reused' };
       }
       if (rec.expiresAt.getTime() <= Date.now()) return { kind: 'invalid' };
-      const user = await this.users.findById(rec.userId);
+      const user = await manager.getRepository(User).findOneBy({ id: rec.userId });
       if (!user || !user.isActive) return { kind: 'invalid' };
 
       const next = await this.issue(rec.userId, rec.familyId, manager);

@@ -160,4 +160,26 @@ describe('auth refresh (e2e)', () => {
     expect(missing.status).toBe(401);
     expect(missing.body.code).toBe('UNAUTHORIZED');
   });
+
+  it('role change then refresh yields a new bo_at carrying the updated role', async () => {
+    const { id, email } = await newUser();
+    const rt1 = await loginAs(email);
+    await t.dataSource.getRepository(User).update({ id }, { role: Role.MANAGER });
+    const res = await refreshRaw(rt1);
+    expect(res.status).toBe(204);
+    const token = rawOf(res, 'bo_at');
+    const payload = JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString()) as {
+      sub: string;
+      role: string;
+    };
+    expect(payload.sub).toBe(id);
+    expect(payload.role).toBe('MANAGER');
+  });
+
+  it('many concurrent refreshes with different valid tokens all succeed (no pool exhaustion)', async () => {
+    const users = await Promise.all(Array.from({ length: 14 }, () => newUser()));
+    const tokens = await Promise.all(users.map((u) => loginAs(u.email)));
+    const results = await Promise.all(tokens.map((rt) => refreshRaw(rt)));
+    expect(results.map((r) => r.status)).toEqual(tokens.map(() => 204));
+  }, 20_000);
 });
