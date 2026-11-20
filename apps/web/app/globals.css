@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 색상 토큰은 v2 디자인 시안에서 추출했다.
+ * 이번 단계는 라이트 전용이므로 .dark 블록은 유지만 하고 사용하지 않는다.
+ */
+:root {
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --background: #f2f4f6; /* 페이지 캔버스 */
+  --foreground: #191f28;
+  --card: #ffffff;
+  --card-foreground: #191f28;
+  --popover: #ffffff;
+  --popover-foreground: #191f28;
+  --primary: #3182f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f8fa;
+  --secondary-foreground: #191f28;
+  --muted: #f7f8fa;
+  --muted-foreground: #8b95a1;
+  --accent: #f2f7ff;
+  --accent-foreground: #3182f6;
+  --destructive: #f04452;
+  --border: #f2f4f6;
+  --input: #d8dee6;
+  --ring: #3182f6;
+  --chart-1: #33415c;
+  --chart-2: #5a719c;
+  --chart-3: #93a6c6;
+  --chart-4: #cfd8e6;
+  --chart-5: #eef1f5;
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* 시안 전용 토큰 — Tailwind 유틸리티(bg-brand, bg-canvas ...)로 노출된다 */
+@theme {
+  --color-brand: #3182f6;
+  --color-brand-hover: #1b64da;
+
+  --color-canvas: #f2f4f6;
+  --color-subtle: #f7f8fa;
+  --color-row-hover: #f7f9fc;
+  --color-row-active: #f2f7ff;
+  --color-track: #eef1f5;
+  --color-hairline: #d8dee6;
+  --color-muted-strong: #4e5968;
+
+  /*
+   * 섹터 도넛용 카테고리컬 팔레트 — 섹터는 크기가 아니라 '정체성'이라 색상을 나눈다.
+   * 슬롯 순서 자체가 색각이상 안전성 장치이므로 임의로 재배열하지 않는다.
+   * (흰 카드 위 인접쌍 최악 ΔE: 색각이상 9.1 / 일반시야 19.6 — 둘 다 기준 통과)
+   *
+   * 무지개처럼 색상환 순서로 늘어놓는 배열은 노랑·주황·빨강·마젠타가 이웃하게 되어
+   * 일반시야 ΔE 7.1까지 떨어진다. 그래서 이 순서는 '그라데이션처럼' 정렬하지 않는다.
+   */
+  --color-sector-1: #2a78d6; /* blue */
+  --color-sector-2: #eb6834; /* orange */
+  --color-sector-3: #1baf7a; /* aqua */
+  --color-sector-4: #eda100; /* yellow */
+  --color-sector-5: #e87ba4; /* magenta */
+  --color-sector-6: #008300; /* green */
+  --color-sector-7: #4a3aa7; /* violet */
+
+  /*
+   * 종목 비중 막대용 순차(ordinal) 램프 — 막대는 이미 길이가 크기를 보여주므로
+   * 색은 정렬 순서를 보강하는 한 가지 색상의 명도 그라데이션으로 둔다.
+   * 100단위 간격이라야 인접 단계 명도차 0.06을 넘는다(50단위는 0.047로 미달).
+   */
+  --color-ramp-1: #86b6ef;
+  --color-ramp-2: #5598e7;
+  --color-ramp-3: #2a78d6;
+  --color-ramp-4: #1c5cab;
+  --color-ramp-5: #104281;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "commerce-backoffice",
+  "private": true,
+  "packageManager": "pnpm@10.29.1",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @bo/contracts build && pnpm -r --parallel dev",
+    "db:up": "docker compose up -d --wait",
+    "db:up:storage": "docker compose --profile storage up -d",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:e2e": "pnpm --filter api test:e2e",
+    "db:migrate": "pnpm --filter @bo/contracts build && pnpm --filter api build && pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter @bo/contracts build && pnpm --filter api build && pnpm --filter api db:seed"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "prettier-plugin-tailwindcss": "^0.8.1"
+  }
+}

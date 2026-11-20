@@ -25,15 +25,15 @@
 
 ### 목표
 
-| 영역 | 내용 |
-| --- | --- |
-| 인증 | JWT 기반 로그인·로그아웃·토큰 갱신 |
-| 권한 | 3단계 RBAC, 서버·클라이언트 양쪽에서 강제 |
-| 리스트 | 서버 페이지네이션 + 검색·필터·정렬, URL 동기화 |
-| 대시보드 | KPI 카드 + 차트 (recharts) |
-| 파일 | 상품 이미지 다중 업로드, 서버에서 리사이즈·썸네일 |
-| 트랜잭션 | 주문 확정 시 재고 차감 (비관적 락) |
-| 엑셀 | 현재 필터 조건 그대로 상품·주문 목록 `.xlsx` 다운로드 |
+| 영역     | 내용                                                  |
+| -------- | ----------------------------------------------------- |
+| 인증     | JWT 기반 로그인·로그아웃·토큰 갱신                    |
+| 권한     | 3단계 RBAC, 서버·클라이언트 양쪽에서 강제             |
+| 리스트   | 서버 페이지네이션 + 검색·필터·정렬, URL 동기화        |
+| 대시보드 | KPI 카드 + 차트 (recharts)                            |
+| 파일     | 상품 이미지 다중 업로드, 서버에서 리사이즈·썸네일     |
+| 트랜잭션 | 주문 확정 시 재고 차감 (비관적 락)                    |
+| 엑셀     | 현재 필터 조건 그대로 상품·주문 목록 `.xlsx` 다운로드 |
 
 ### 비목표
 
@@ -50,36 +50,36 @@
 
 ### 프론트 `apps/web` — 물타기 기준 **[결정]**
 
-| 영역 | 선택 | 비고 |
-| --- | --- | --- |
-| 프레임워크 | Next.js 16 (App Router), TypeScript strict | |
-| 스타일 | Tailwind v4 + Shadcn UI (radix-nova, neutral) | 물타기 `globals.css` 토큰·`shared/ui` 이식 |
-| 서버 상태 | TanStack Query v5 | |
-| 클라이언트 상태 | Zustand | |
-| 폼 | react-hook-form + zod | |
-| 차트 | recharts | |
-| 테스트 | Vitest + RTL + MSW | |
-| 린트 | ESLint 9 + eslint-plugin-boundaries (FSD) | |
-| 추가 | **TanStack Table** **[제안]** | 정렬·컬럼 표시 제어 등 어드민 테이블용. Shadcn data-table 패턴과 맞물림 |
+| 영역            | 선택                                          | 비고                                                                    |
+| --------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
+| 프레임워크      | Next.js 16 (App Router), TypeScript strict    |                                                                         |
+| 스타일          | Tailwind v4 + Shadcn UI (radix-nova, neutral) | 물타기 `globals.css` 토큰·`shared/ui` 이식                              |
+| 서버 상태       | TanStack Query v5                             |                                                                         |
+| 클라이언트 상태 | Zustand                                       |                                                                         |
+| 폼              | react-hook-form + zod                         |                                                                         |
+| 차트            | recharts                                      |                                                                         |
+| 테스트          | Vitest + RTL + MSW                            |                                                                         |
+| 린트            | ESLint 9 + eslint-plugin-boundaries (FSD)     |                                                                         |
+| 추가            | **TanStack Table** **[제안]**                 | 정렬·컬럼 표시 제어 등 어드민 테이블용. Shadcn data-table 패턴과 맞물림 |
 
 ### 백엔드 `apps/api` **[결정]**
 
-| 영역 | 선택 |
-| --- | --- |
-| 런타임/프레임워크 | Node.js LTS + NestJS |
-| DB | PostgreSQL 16 |
-| ORM | TypeORM (`synchronize: false`, 마이그레이션 사용) |
+| 영역              | 선택                                              |
+| ----------------- | ------------------------------------------------- |
+| 런타임/프레임워크 | Node.js LTS + NestJS                              |
+| DB                | PostgreSQL 16                                     |
+| ORM               | TypeORM (`synchronize: false`, 마이그레이션 사용) |
 
-| 영역 | 선택 **[제안]** | 이유 |
-| --- | --- | --- |
-| 검증 | class-validator + class-transformer | Nest 표준 |
-| 인증 | @nestjs/passport + passport-jwt, argon2 | |
-| 업로드 | Multer(메모리) + sharp | 서버에서 이미지 가공 |
-| 스토리지 | MinIO (S3 호환, docker) + AWS SDK v3 | 배포 시 S3/R2로 엔드포인트만 교체 |
-| 엑셀 | exceljs (스트리밍 WorkbookWriter) | 대용량에서도 메모리 일정 |
-| 문서 | @nestjs/swagger | 리뷰어가 API를 바로 눌러볼 수 있음 |
-| 테스트 | Jest + Supertest, Testcontainers(PostgreSQL) | 트랜잭션·락은 실 DB로만 검증 가능 |
-| 로깅 | nestjs-pino | |
+| 영역     | 선택 **[제안]**                              | 이유                               |
+| -------- | -------------------------------------------- | ---------------------------------- |
+| 검증     | class-validator + class-transformer          | Nest 표준                          |
+| 인증     | @nestjs/passport + passport-jwt, argon2      |                                    |
+| 업로드   | Multer(메모리) + sharp                       | 서버에서 이미지 가공               |
+| 스토리지 | MinIO (S3 호환, docker) + AWS SDK v3         | 배포 시 S3/R2로 엔드포인트만 교체  |
+| 엑셀     | exceljs (스트리밍 WorkbookWriter)            | 대용량에서도 메모리 일정           |
+| 문서     | @nestjs/swagger                              | 리뷰어가 API를 바로 눌러볼 수 있음 |
+| 테스트   | Jest + Supertest, Testcontainers(PostgreSQL) | 트랜잭션·락은 실 DB로만 검증 가능  |
+| 로깅     | nestjs-pino                                  |                                    |
 
 ### 저장소 구조 **[제안]**
 
@@ -102,11 +102,11 @@ commerce-backoffice/
 
 ## 4. 접근 방식 — 프론트와 API를 어떻게 연결하나
 
-| 방식 | 내용 | 장점 | 단점 |
-| --- | --- | --- | --- |
-| A. 브라우저 → Nest 직접 호출 (CORS) | web과 api가 서로 다른 출처 | 구조 단순 | 쿠키가 cross-site가 되어 `SameSite=None; Secure` 필요, 로컬·배포 환경 차이로 디버깅 부담 |
-| **B. Next rewrites 프록시 (선택)** | `/api/*` → Nest로 rewrite | 같은 출처라 httpOnly 쿠키가 자연스럽게 동작, CORS 없음 | 배포 시 web이 api 주소를 알아야 함 (env 하나) |
-| C. Next Route Handler BFF | Next 서버가 모든 요청을 중계 | 토큰을 완전히 서버에 숨김 | 모든 API를 두 번 구현, 포트폴리오 범위 대비 과함 |
+| 방식                                | 내용                         | 장점                                                   | 단점                                                                                     |
+| ----------------------------------- | ---------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| A. 브라우저 → Nest 직접 호출 (CORS) | web과 api가 서로 다른 출처   | 구조 단순                                              | 쿠키가 cross-site가 되어 `SameSite=None; Secure` 필요, 로컬·배포 환경 차이로 디버깅 부담 |
+| **B. Next rewrites 프록시 (선택)**  | `/api/*` → Nest로 rewrite    | 같은 출처라 httpOnly 쿠키가 자연스럽게 동작, CORS 없음 | 배포 시 web이 api 주소를 알아야 함 (env 하나)                                            |
+| C. Next Route Handler BFF           | Next 서버가 모든 요청을 중계 | 토큰을 완전히 서버에 숨김                              | 모든 API를 두 번 구현, 포트폴리오 범위 대비 과함                                         |
 
 **B를 택한다** **[제안]**. 쿠키 기반 인증을 가장 적은 코드로 안전하게 쓸 수 있고,
 "왜 CORS 대신 프록시를 썼나"는 그 자체로 면접 소재가 된다.
@@ -123,18 +123,18 @@ Category ──< Product ──1 Inventory
              Product ──< InventoryHistory
 ```
 
-| 엔티티 | 주요 필드 |
-| --- | --- |
-| `User` | id, email(unique), passwordHash, name, role(`ADMIN`·`MANAGER`·`VIEWER`), isActive, createdAt |
-| `RefreshToken` | id, userId, tokenHash, familyId, expiresAt, revokedAt |
-| `Category` | id, name |
-| `Product` | id, sku(unique), name, categoryId, price(int, 원), status(`DRAFT`·`ON_SALE`·`SOLD_OUT`·`HIDDEN`), description, createdAt, updatedAt, deletedAt(soft delete) |
-| `ProductImage` | id, productId(null 허용), objectKey, thumbKey, width, height, sortOrder, isPrimary |
-| `Inventory` | productId(PK), quantity(`CHECK >= 0`), safetyStock, updatedAt |
-| `Order` | id, orderNo(unique), customerName, status, totalAmount, createdAt, confirmedAt, cancelledAt |
-| `OrderItem` | id, orderId, productId, quantity, unitPrice(주문 시점 가격 스냅샷) |
-| `InventoryHistory` | id, productId, delta, reason(`ORDER_CONFIRM`·`ORDER_CANCEL`·`MANUAL_ADJUST`), refOrderId, actorId, createdAt |
-| `OrderStatusHistory` | id, orderId, fromStatus, toStatus, actorId, createdAt (주문 상세 타임라인용. 상태 전이와 같은 트랜잭션에서 기록) |
+| 엔티티               | 주요 필드                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`               | id, email(unique), passwordHash, name, role(`ADMIN`·`MANAGER`·`VIEWER`), isActive, createdAt                                                                |
+| `RefreshToken`       | id, userId, tokenHash, familyId, expiresAt, revokedAt                                                                                                       |
+| `Category`           | id, name                                                                                                                                                    |
+| `Product`            | id, sku(unique), name, categoryId, price(int, 원), status(`DRAFT`·`ON_SALE`·`SOLD_OUT`·`HIDDEN`), description, createdAt, updatedAt, deletedAt(soft delete) |
+| `ProductImage`       | id, productId(null 허용), objectKey, thumbKey, width, height, sortOrder, isPrimary                                                                          |
+| `Inventory`          | productId(PK), quantity(`CHECK >= 0`), safetyStock, updatedAt                                                                                               |
+| `Order`              | id, orderNo(unique), customerName, status, totalAmount, createdAt, confirmedAt, cancelledAt                                                                 |
+| `OrderItem`          | id, orderId, productId, quantity, unitPrice(주문 시점 가격 스냅샷)                                                                                          |
+| `InventoryHistory`   | id, productId, delta, reason(`ORDER_CONFIRM`·`ORDER_CANCEL`·`MANUAL_ADJUST`), refOrderId, actorId, createdAt                                                |
+| `OrderStatusHistory` | id, orderId, fromStatus, toStatus, actorId, createdAt (주문 상세 타임라인용. 상태 전이와 같은 트랜잭션에서 기록)                                            |
 
 - `orderNo`는 `ORD-20261120-0001` 형식이다 **[제안]**.
 - `PENDING` 주문은 재고를 미리 잡아두지 않는다(예약 없음). 재고는 확정 시점에만 차감한다.
@@ -185,10 +185,10 @@ PENDING ──확정──▶ CONFIRMED ──출고──▶ SHIPPED ──완�
 
 ### 7.1 토큰 전략 [제안]
 
-| 토큰 | 저장 | 만료 | 비고 |
-| --- | --- | --- | --- |
-| Access JWT | httpOnly 쿠키, `SameSite=Lax`, `Path=/` | JWT 15분 (쿠키 수명은 7일) | payload: `sub`, `role` |
-| Refresh | httpOnly 쿠키, `SameSite=Strict`, `Path=/api/v1/auth` | 7일 | DB에 해시로 저장 |
+| 토큰       | 저장                                                  | 만료                       | 비고                   |
+| ---------- | ----------------------------------------------------- | -------------------------- | ---------------------- |
+| Access JWT | httpOnly 쿠키, `SameSite=Lax`, `Path=/`               | JWT 15분 (쿠키 수명은 7일) | payload: `sub`, `role` |
+| Refresh    | httpOnly 쿠키, `SameSite=Strict`, `Path=/api/v1/auth` | 7일                        | DB에 해시로 저장       |
 
 - Access 쿠키는 `Path=/`여야 페이지 요청(`/dashboard` 등)에도 실려 `proxy.ts`가 볼 수 있다.
   쿠키 수명을 refresh와 같게 두는 이유는, JWT가 만료돼도 쿠키가 남아 있어야 `proxy.ts`가
@@ -204,16 +204,16 @@ PENDING ──확정──▶ CONFIRMED ──출고──▶ SHIPPED ──완�
 
 ### 7.2 RBAC
 
-| 권한 | ADMIN | MANAGER | VIEWER |
-| --- | :-: | :-: | :-: |
-| 대시보드 조회 | ✓ | ✓ | ✓ |
-| 상품 조회 | ✓ | ✓ | ✓ |
-| 상품 등록·수정·삭제, 이미지 업로드 | ✓ | ✓ | – |
-| 재고 수동 조정 | ✓ | ✓ | – |
-| 주문 조회 | ✓ | ✓ | ✓ |
-| 주문 상태 변경 | ✓ | ✓ | – |
-| 엑셀 다운로드 | ✓ | ✓ | – |
-| 사용자 관리 (초대·역할 변경·비활성화) | ✓ | – | – |
+| 권한                                  | ADMIN | MANAGER | VIEWER |
+| ------------------------------------- | :---: | :-----: | :----: |
+| 대시보드 조회                         |   ✓   |    ✓    |   ✓    |
+| 상품 조회                             |   ✓   |    ✓    |   ✓    |
+| 상품 등록·수정·삭제, 이미지 업로드    |   ✓   |    ✓    |   –    |
+| 재고 수동 조정                        |   ✓   |    ✓    |   –    |
+| 주문 조회                             |   ✓   |    ✓    |   ✓    |
+| 주문 상태 변경                        |   ✓   |    ✓    |   –    |
+| 엑셀 다운로드                         |   ✓   |    ✓    |   –    |
+| 사용자 관리 (초대·역할 변경·비활성화) |   ✓   |    –    |   –    |
 
 - **서버**: 전역 `JwtAuthGuard` + `RolesGuard`, 컨트롤러에 `@Roles(Role.MANAGER)` 형태.
   역할은 계층형(ADMIN ⊃ MANAGER ⊃ VIEWER)으로 비교한다.
@@ -240,21 +240,21 @@ PENDING ──확정──▶ CONFIRMED ──출고──▶ SHIPPED ──완�
 
 ### 엔드포인트 개요
 
-| 메서드·경로 | 권한 | 설명 |
-| --- | --- | --- |
-| `POST /auth/login` · `/auth/refresh` · `/auth/logout` · `GET /auth/me` | - | 인증 |
-| `GET /products` | VIEWER | 검색(name·sku), categoryId, status, minPrice·maxPrice, 재고부족 여부, 정렬, 페이지 |
-| `GET /products/:id` | VIEWER | |
-| `POST·PATCH·DELETE /products/:id` | MANAGER | 삭제는 soft delete |
-| `POST /products/images` | MANAGER | multipart, 이미지 → `{ id, url, thumbUrl }` |
-| `PATCH /products/:id/inventory` | MANAGER | 수동 조정 (사유 필수, 트랜잭션 + 이력) |
-| `GET /orders` | VIEWER | status, 기간(from·to), 주문번호·고객명 검색, 페이지 |
-| `GET /orders/:id` | VIEWER | 품목·상태 이력 포함 |
-| `POST /orders/:id/confirm·ship·deliver·cancel` | MANAGER | 상태 전이 |
-| `GET /products/export` · `GET /orders/export` | MANAGER | 목록과 같은 필터 쿼리 → `.xlsx` |
-| `GET /dashboard/summary` · `/sales-trend?days=30` · `/category-sales` · `/low-stock` | VIEWER | 집계 |
-| `GET·POST·PATCH /users` | ADMIN | 사용자 관리 |
-| `POST /dev/orders/random` | 개발 환경 전용 | 가상 주문 생성 (데모용) |
+| 메서드·경로                                                                          | 권한           | 설명                                                                               |
+| ------------------------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------- |
+| `POST /auth/login` · `/auth/refresh` · `/auth/logout` · `GET /auth/me`               | -              | 인증                                                                               |
+| `GET /products`                                                                      | VIEWER         | 검색(name·sku), categoryId, status, minPrice·maxPrice, 재고부족 여부, 정렬, 페이지 |
+| `GET /products/:id`                                                                  | VIEWER         |                                                                                    |
+| `POST·PATCH·DELETE /products/:id`                                                    | MANAGER        | 삭제는 soft delete                                                                 |
+| `POST /products/images`                                                              | MANAGER        | multipart, 이미지 → `{ id, url, thumbUrl }`                                        |
+| `PATCH /products/:id/inventory`                                                      | MANAGER        | 수동 조정 (사유 필수, 트랜잭션 + 이력)                                             |
+| `GET /orders`                                                                        | VIEWER         | status, 기간(from·to), 주문번호·고객명 검색, 페이지                                |
+| `GET /orders/:id`                                                                    | VIEWER         | 품목·상태 이력 포함                                                                |
+| `POST /orders/:id/confirm·ship·deliver·cancel`                                       | MANAGER        | 상태 전이                                                                          |
+| `GET /products/export` · `GET /orders/export`                                        | MANAGER        | 목록과 같은 필터 쿼리 → `.xlsx`                                                    |
+| `GET /dashboard/summary` · `/sales-trend?days=30` · `/category-sales` · `/low-stock` | VIEWER         | 집계                                                                               |
+| `GET·POST·PATCH /users`                                                              | ADMIN          | 사용자 관리                                                                        |
+| `POST /dev/orders/random`                                                            | 개발 환경 전용 | 가상 주문 생성 (데모용)                                                            |
 
 ## 9. 파일 업로드 / 이미지 처리
 
@@ -298,11 +298,11 @@ apps/web/
 
 ### 11.2 상태 분리 (물타기 README의 "상태 두 갈래" 원칙 확장)
 
-| 상태 | 위치 |
-| --- | --- |
-| 서버 데이터 (목록, 상세, 현재 사용자 `/me`) | React Query |
-| 목록 필터·정렬·페이지 | **URL 쿼리** (`useSearchParams` + zod 파싱). 새로고침·공유해도 유지된다 |
-| UI 설정 (사이드바 접힘, 테이블 컬럼 표시, 페이지 크기) | Zustand + persist |
+| 상태                                                   | 위치                                                                    |
+| ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| 서버 데이터 (목록, 상세, 현재 사용자 `/me`)            | React Query                                                             |
+| 목록 필터·정렬·페이지                                  | **URL 쿼리** (`useSearchParams` + zod 파싱). 새로고침·공유해도 유지된다 |
+| UI 설정 (사이드바 접힘, 테이블 컬럼 표시, 페이지 크기) | Zustand + persist                                                       |
 
 토큰은 httpOnly 쿠키에만 있으므로 프론트 전역 상태에 두지 않는다.
 
@@ -315,16 +315,16 @@ apps/web/
 
 ### 11.4 화면 목록
 
-| 화면 | 주요 요소 |
-| --- | --- |
-| 로그인 | 이메일·비밀번호, 데모 계정 빠른 선택 버튼 3개 |
-| 대시보드 | KPI 4개(오늘 매출·오늘 주문·처리 대기·재고 부족), 30일 매출 라인차트, 카테고리별 매출 도넛, 최근 주문 5건, 재고 부족 상품 |
-| 상품 목록 | 검색, 카테고리·상태·가격 범위·재고부족 필터, 정렬, 페이지, 엑셀, 일괄 선택 후 상태 변경 **[선택]** |
-| 상품 등록·수정 | RHF + zod 폼, 이미지 드래그 업로드·순서 변경·대표 지정, 재고 수동 조정 다이얼로그 |
-| 주문 목록 | 상태 탭과 기간 필터, 검색, 페이지, 엑셀 |
-| 주문 상세 | 품목·금액, 상태 타임라인, 허용된 전이 버튼만 노출, 재고 부족 실패 시 품목별 안내 |
-| 사용자 관리 | ADMIN 전용. 목록, 역할 변경, 비활성화 |
-| 403 / 404 | 권한 없음과 없는 페이지 |
+| 화면           | 주요 요소                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 로그인         | 이메일·비밀번호, 데모 계정 빠른 선택 버튼 3개                                                                             |
+| 대시보드       | KPI 4개(오늘 매출·오늘 주문·처리 대기·재고 부족), 30일 매출 라인차트, 카테고리별 매출 도넛, 최근 주문 5건, 재고 부족 상품 |
+| 상품 목록      | 검색, 카테고리·상태·가격 범위·재고부족 필터, 정렬, 페이지, 엑셀, 일괄 선택 후 상태 변경 **[선택]**                        |
+| 상품 등록·수정 | RHF + zod 폼, 이미지 드래그 업로드·순서 변경·대표 지정, 재고 수동 조정 다이얼로그                                         |
+| 주문 목록      | 상태 탭과 기간 필터, 검색, 페이지, 엑셀                                                                                   |
+| 주문 상세      | 품목·금액, 상태 타임라인, 허용된 전이 버튼만 노출, 재고 부족 실패 시 품목별 안내                                          |
+| 사용자 관리    | ADMIN 전용. 목록, 역할 변경, 비활성화                                                                                     |
+| 403 / 404      | 권한 없음과 없는 페이지                                                                                                   |
 
 ## 12. 개발 환경과 품질
 
@@ -338,15 +338,15 @@ apps/web/
 
 각 단계가 끝날 때마다 실제로 동작하는 상태를 만든다.
 
-| # | 단계 | 산출물 |
-| --- | --- | --- |
-| M0 | 기반 | 모노레포, docker compose, Nest·Next 스캐폴딩, 물타기 UI·린트 이식, CI |
-| M1 | 인증·권한 | 로그인·갱신·로그아웃, Guard, `proxy.ts`, 사이드바 레이아웃, 403 페이지 |
-| M2 | 상품 | CRUD, 목록 필터·정렬·페이지(URL 동기화), 이미지 업로드 |
-| M3 | 주문·트랜잭션 | 상태 머신, 확정·취소 트랜잭션, 재고 조정, 동시성 테스트, 시드·가상 주문 |
-| M4 | 대시보드 | 집계 API, KPI·차트 |
-| M5 | 엑셀 | 상품·주문 스트리밍 export |
-| M6 | 마무리 | 사용자 관리, Swagger 정리, README(설계 결정·스크린샷), 배포 |
+| #   | 단계          | 산출물                                                                  |
+| --- | ------------- | ----------------------------------------------------------------------- |
+| M0  | 기반          | 모노레포, docker compose, Nest·Next 스캐폴딩, 물타기 UI·린트 이식, CI   |
+| M1  | 인증·권한     | 로그인·갱신·로그아웃, Guard, `proxy.ts`, 사이드바 레이아웃, 403 페이지  |
+| M2  | 상품          | CRUD, 목록 필터·정렬·페이지(URL 동기화), 이미지 업로드                  |
+| M3  | 주문·트랜잭션 | 상태 머신, 확정·취소 트랜잭션, 재고 조정, 동시성 테스트, 시드·가상 주문 |
+| M4  | 대시보드      | 집계 API, KPI·차트                                                      |
+| M5  | 엑셀          | 상품·주문 스트리밍 export                                               |
+| M6  | 마무리        | 사용자 관리, Swagger 정리, README(설계 결정·스크린샷), 배포             |
 
 배포 **[제안]**: web은 Vercel, api와 PostgreSQL은 Railway(또는 Render), 스토리지는 Cloudflare R2.
 면접관이 링크 하나로 데모를 볼 수 있게 한다.
