@@ -6,7 +6,8 @@ const mockRes = () => {
   const res = { cookie: vi.fn(), clearCookie: vi.fn() };
   return { res, asResponse: res as unknown as Response };
 };
-const env = (NODE_ENV: Env['NODE_ENV']) => ({ NODE_ENV }) as Env;
+const env = (NODE_ENV: Env['NODE_ENV'], REFRESH_TTL_SEC = 604800) =>
+  ({ NODE_ENV, REFRESH_TTL_SEC }) as Env;
 
 describe('auth cookies', () => {
   it.each([
@@ -30,6 +31,21 @@ describe('auth cookies', () => {
         path: '/api/v1/auth',
         secure,
       }),
+    );
+  });
+
+  it('derives Max-Age (ms) from REFRESH_TTL_SEC for both cookies', () => {
+    const { res, asResponse } = mockRes();
+    setAuthCookies(asResponse, 'at', 'rt', env('development', 3600));
+    expect(res.cookie).toHaveBeenCalledWith(
+      'bo_at',
+      'at',
+      expect.objectContaining({ maxAge: 3_600_000 }),
+    );
+    expect(res.cookie).toHaveBeenCalledWith(
+      'bo_rt',
+      'rt',
+      expect.objectContaining({ maxAge: 3_600_000 }),
     );
   });
 
