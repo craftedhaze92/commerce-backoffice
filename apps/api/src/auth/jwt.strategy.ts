@@ -8,7 +8,7 @@ import { ENV } from '../config/env.module.js';
 import type { Env } from '../config/env.js';
 import { UsersService } from '../users/users.service.js';
 import { ACCESS_COOKIE } from './auth-cookies.js';
-import type { AuthUser } from './decorators.js';
+import type { AuthUser } from '../common/decorators.js';
 
 export interface JwtPayload {
   sub: string;

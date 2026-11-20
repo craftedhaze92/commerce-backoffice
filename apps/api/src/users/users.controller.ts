@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiCookieAuth } from '@nestjs/swagger';
 import { Role, type Paginated, type UserListItem } from '@bo/contracts';
-import { Roles } from '../auth/decorators.js';
+import { Roles } from '../common/decorators.js';
 import { ListUsersQuery } from './dto/list-users.query.js';
 import { UsersService } from './users.service.js';
 

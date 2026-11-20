@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Public } from '../auth/decorators.js';
+import { Public } from '../common/decorators.js';
 
 @Controller('health')
 export class HealthController {
