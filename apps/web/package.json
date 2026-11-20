@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@bo/contracts": "workspace:*",
+    "@hookform/resolvers": "^7.0.7",
     "@tanstack/react-query": "^5.108.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
