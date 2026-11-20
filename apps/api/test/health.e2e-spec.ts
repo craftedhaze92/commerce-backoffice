@@ -28,6 +28,15 @@ describe('health & error format (e2e)', () => {
     });
   });
 
-  // Needs a DTO-backed endpoint; enabled in Task 4 (login DTO).
-  it.todo('validation error → 400 VALIDATION_FAILED with details');
+  it('validation error → 400 VALIDATION_FAILED with details', async () => {
+    const res = await request(t.app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .set('X-Requested-With', 'fetch')
+      .send({ email: 'nope', password: '', extra: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_FAILED');
+    expect(res.body.details).toEqual(
+      expect.arrayContaining([{ field: 'email', messages: expect.any(Array) }]),
+    );
+  });
 });

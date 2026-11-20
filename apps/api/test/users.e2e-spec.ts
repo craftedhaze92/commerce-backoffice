@@ -23,8 +23,8 @@ describe('users (e2e)', () => {
     await repo.clear();
   });
 
-  const make = (email: string, name = 'n') =>
-    repo.save(repo.create({ email, passwordHash: 'h', name }));
+  const make = (email: string, name = 'n', createdAt?: Date) =>
+    repo.save(repo.create({ email, passwordHash: 'h', name, ...(createdAt && { createdAt }) }));
 
   it('defaults role VIEWER and isActive true', async () => {
     const u = await make('a@x.com');
@@ -54,7 +54,7 @@ describe('users (e2e)', () => {
   });
 
   it('list paginates createdAt DESC and maps to UserListItem', async () => {
-    for (const n of ['1', '2', '3']) await make(`u${n}@x.com`, `user${n}`);
+    for (const n of [1, 2, 3]) await make(`u${n}@x.com`, `user${n}`, new Date(2026, 0, n));
     const p1 = await users.list(1, 2);
     expect(p1.meta).toEqual({ page: 1, size: 2, total: 3, totalPages: 2 });
     expect(p1.items.map((i) => i.email)).toEqual(['u3@x.com', 'u2@x.com']);
@@ -64,6 +64,11 @@ describe('users (e2e)', () => {
     expect(typeof p1.items[0]!.createdAt).toBe('string');
     const p2 = await users.list(2, 2);
     expect(p2.items.map((i) => i.email)).toEqual(['u1@x.com']);
+  });
+
+  it('saving a mixed-case email stores it trimmed and lowercase', async () => {
+    const u = await make('  Mixed@Demo.COM ');
+    expect((await repo.findOneByOrFail({ id: u.id })).email).toBe('mixed@demo.com');
   });
 
   it('list on empty table has totalPages 0', async () => {

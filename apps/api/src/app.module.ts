@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
+import { AuthModule } from './auth/auth.module.js';
+import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { ENV, EnvModule } from './config/env.module.js';
 import type { Env } from './config/env.js';
 import { buildDataSourceOptions } from './database/data-source.js';
@@ -11,6 +14,7 @@ import { UsersModule } from './users/users.module.js';
   imports: [
     EnvModule,
     UsersModule,
+    AuthModule,
     LoggerModule.forRootAsync({
       inject: [ENV],
       useFactory: (env: Env) => ({
@@ -37,5 +41,6 @@ import { UsersModule } from './users/users.module.js';
     }),
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule {}

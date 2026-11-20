@@ -6,14 +6,22 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { normalizeEmail } from '../auth/password.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  /** Always stored lowercase; callers must normalizeEmail() first. */
-  @Column({ type: 'varchar', unique: true })
+  /** Always stored trimmed + lowercase (enforced on write by the transformer). */
+  @Column({
+    type: 'varchar',
+    unique: true,
+    transformer: {
+      to: (v: unknown) => (typeof v === 'string' ? normalizeEmail(v) : v),
+      from: (v: string) => v,
+    },
+  })
   email: string;
 
   @Column({ type: 'varchar' })
