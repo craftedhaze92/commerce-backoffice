@@ -55,7 +55,7 @@ pnpm dev
 | `pnpm typecheck`     | 전체 타입 검사                                  |
 | `pnpm test`          | 단위 테스트                                     |
 | `pnpm test:e2e`      | API e2e 테스트 (Testcontainers, Docker 필요)    |
-| `pnpm db:up`         | docker compose로 PostgreSQL·MinIO 기동          |
+| `pnpm db:up`         | docker compose로 PostgreSQL 기동                |
 | `pnpm db:up:storage` | MinIO까지 함께 기동 (M2 이미지 업로드부터 필요) |
 | `pnpm db:migrate`    | DB 마이그레이션 적용(API 빌드 포함)             |
 | `pnpm db:seed`       | 데모 계정 시드(API 빌드 포함)                   |
