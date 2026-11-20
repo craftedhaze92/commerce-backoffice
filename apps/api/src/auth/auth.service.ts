@@ -37,12 +37,24 @@ export class AuthService {
     if (!user || !ok || !user.isActive) {
       throw new AppException(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
     }
-    const access = await this.jwt.signAsync(
+    const access = await this.signAccess(user);
+    const { raw } = await this.refreshTokens.issue(user.id);
+    return { user, access, refreshRaw: raw };
+  }
+
+  async refresh(refreshRaw: string | undefined): Promise<{ access: string; refreshRaw: string }> {
+    if (!refreshRaw) throw new AppException(401, 'UNAUTHORIZED', 'Unauthorized');
+    const { userId, next } = await this.refreshTokens.rotate(refreshRaw);
+    const user = await this.users.findById(userId);
+    if (!user || !user.isActive) throw new AppException(401, 'UNAUTHORIZED', 'Unauthorized');
+    return { access: await this.signAccess(user), refreshRaw: next.raw };
+  }
+
+  private signAccess(user: User): Promise<string> {
+    return this.jwt.signAsync(
       { sub: user.id, role: user.role },
       { expiresIn: this.env.ACCESS_TTL_SEC },
     );
-    const { raw } = await this.refreshTokens.issue(user.id);
-    return { user, access, refreshRaw: raw };
   }
 
   async logout(refreshRaw: string | undefined): Promise<void> {

@@ -38,6 +38,16 @@ export class AuthController {
   }
 
   @Public()
+  @Post('refresh')
+  @HttpCode(204)
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const { access, refreshRaw } = await this.auth.refresh(
+      req.cookies?.[REFRESH_COOKIE] as string | undefined,
+    );
+    setAuthCookies(res, access, refreshRaw, this.env);
+  }
+
+  @Public()
   @Post('logout')
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {

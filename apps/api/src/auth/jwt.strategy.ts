@@ -26,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         (req: Request) => (req?.cookies?.[ACCESS_COOKIE] as string | undefined) ?? null,
       ]),
       ignoreExpiration: false,
+      algorithms: ['HS256'],
       secretOrKey: env.JWT_SECRET,
     });
   }

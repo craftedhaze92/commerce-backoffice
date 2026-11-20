@@ -18,7 +18,11 @@ import { RefreshTokenService } from './refresh-token.service.js';
     TypeOrmModule.forFeature([RefreshToken]),
     JwtModule.registerAsync({
       inject: [ENV],
-      useFactory: (env: Env) => ({ secret: env.JWT_SECRET }),
+      useFactory: (env: Env) => ({
+        secret: env.JWT_SECRET,
+        signOptions: { algorithm: 'HS256' },
+        verifyOptions: { algorithms: ['HS256'] },
+      }),
     }),
   ],
   controllers: [AuthController],

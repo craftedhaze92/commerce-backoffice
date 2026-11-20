@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { JwtService } from '@nestjs/jwt';
 import request, { type Response } from 'supertest';
 import { Role } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
@@ -160,14 +161,63 @@ describe('auth (e2e)', () => {
   it('role changes and deactivation take effect immediately', async () => {
     const res = await login('viewer@demo.com', PW);
     const repo = t.dataSource.getRepository(User);
-    await repo.update({ id: res.body.id }, { role: Role.MANAGER });
-    const me = await request(server).get('/api/v1/auth/me').set('Cookie', cookieHeader(res));
-    expect(me.body.role).toBe('MANAGER');
-    await repo.update({ id: res.body.id }, { isActive: false });
-    const after = await request(server).get('/api/v1/auth/me').set('Cookie', cookieHeader(res));
-    expect(after.status).toBe(401);
-    expect(after.body.code).toBe('UNAUTHORIZED');
-    await repo.update({ id: res.body.id }, { role: Role.VIEWER, isActive: true });
+    try {
+      await repo.update({ id: res.body.id }, { role: Role.MANAGER });
+      const me = await request(server).get('/api/v1/auth/me').set('Cookie', cookieHeader(res));
+      expect(me.body.role).toBe('MANAGER');
+      await repo.update({ id: res.body.id }, { isActive: false });
+      const after = await request(server).get('/api/v1/auth/me').set('Cookie', cookieHeader(res));
+      expect(after.status).toBe(401);
+      expect(after.body.code).toBe('UNAUTHORIZED');
+    } finally {
+      await repo.update({ id: res.body.id }, { role: Role.VIEWER, isActive: true });
+    }
+  });
+
+  describe('invalid access tokens → 401 UNAUTHORIZED', () => {
+    const expectUnauthorized = async (token: string) => {
+      const res = await request(server).get('/api/v1/auth/me').set('Cookie', `bo_at=${token}`);
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: expect.any(String),
+      });
+    };
+    const adminId = async () =>
+      (await t.dataSource.getRepository(User).findOneByOrFail({ email: 'admin@demo.com' })).id;
+
+    it('garbage token', async () => {
+      await expectUnauthorized('garbage');
+    });
+
+    it('token signed with a different secret', async () => {
+      const token = await t.app
+        .get(JwtService)
+        .signAsync(
+          { sub: await adminId(), role: 'ADMIN' },
+          { secret: 'another-secret-another-secret-another-0', expiresIn: 900 },
+        );
+      await expectUnauthorized(token);
+    });
+
+    it('expired token', async () => {
+      const exp = Math.floor(Date.now() / 1000) - 60;
+      const token = await t.app
+        .get(JwtService)
+        .signAsync({ sub: await adminId(), role: 'ADMIN', exp });
+      await expectUnauthorized(token);
+    });
+
+    it('token with alg none', async () => {
+      const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+      const token = `${b64({ alg: 'none', typ: 'JWT' })}.${b64({
+        sub: await adminId(),
+        role: 'ADMIN',
+        exp: Math.floor(Date.now() / 1000) + 600,
+      })}.`;
+      await expectUnauthorized(token);
+    });
   });
 
   it('logout returns 204, clears both cookies and revokes the refresh family', async () => {
@@ -195,8 +245,20 @@ describe('auth (e2e)', () => {
     expect(out.status).toBe(204);
   });
 
-  // Needs POST /auth/refresh; enabled in Task 5.
-  it.todo('after logout, POST /auth/refresh with the old bo_rt → 401');
+  it('after logout, POST /auth/refresh with the old bo_rt → 401', async () => {
+    const res = await login('admin@demo.com', PW);
+    const old = cookieHeader(res);
+    await request(server)
+      .post('/api/v1/auth/logout')
+      .set('X-Requested-With', 'fetch')
+      .set('Cookie', old);
+    const refreshed = await request(server)
+      .post('/api/v1/auth/refresh')
+      .set('X-Requested-With', 'fetch')
+      .set('Cookie', old);
+    expect(refreshed.status).toBe(401);
+    expect(refreshed.body.code).toMatch(/^(UNAUTHORIZED|TOKEN_REUSED)$/);
+  });
 });
 
 function sha256(v: string): string {
