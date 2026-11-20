@@ -18,7 +18,7 @@ export interface TestApp {
 
 /** Boots the real AppModule (same wiring as main.ts) against a throwaway Postgres container. */
 export async function createTestApp(): Promise<TestApp> {
-  const [container, s3Container] = await Promise.all([
+  const [pgResult, s3Result] = await Promise.allSettled([
     new PostgreSqlContainer('postgres:16-alpine').start(),
     new GenericContainer('adobe/s3mock:4.11.0')
       .withExposedPorts(9090)
@@ -26,6 +26,15 @@ export async function createTestApp(): Promise<TestApp> {
       .withWaitStrategy(Wait.forHttp('/', 9090).forStatusCodeMatching((c) => c < 500))
       .start(),
   ]);
+  if (pgResult.status === 'rejected' || s3Result.status === 'rejected') {
+    if (pgResult.status === 'fulfilled') await pgResult.value.stop();
+    if (s3Result.status === 'fulfilled') await s3Result.value.stop();
+    throw pgResult.status === 'rejected'
+      ? pgResult.reason
+      : (s3Result as PromiseRejectedResult).reason;
+  }
+  const container = pgResult.value;
+  const s3Container = s3Result.value;
   const s3Endpoint = `http://${s3Container.getHost()}:${s3Container.getMappedPort(9090)}`;
   Object.assign(process.env, {
     S3_ENDPOINT: s3Endpoint,

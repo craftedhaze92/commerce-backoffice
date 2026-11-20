@@ -31,9 +31,9 @@ export class ProductImagesService {
     const objectKey = `${dir}/${id}.webp`;
     const thumbKey = `${dir}/${id}_thumb.webp`;
 
-    await this.storage.put(objectKey, main.data, 'image/webp');
-    await this.storage.put(thumbKey, thumb.data, 'image/webp');
     try {
+      await this.storage.put(objectKey, main.data, 'image/webp');
+      await this.storage.put(thumbKey, thumb.data, 'image/webp');
       const saved = await this.images.save(
         this.images.create({
           objectKey,

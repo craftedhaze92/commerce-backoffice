@@ -51,6 +51,16 @@ describe('product images (e2e)', () => {
   const rows = async () =>
     Number((await t.dataSource.query('SELECT count(*) FROM product_images'))[0].count);
 
+  // The bucket is shared by every test, so "nothing stored" is measured against a per-test baseline.
+  let baselineKeys = 0;
+  const bucketKeyCount = async () => {
+    const res = await fetch(`${t.s3.endpoint}/${t.s3.bucket}?list-type=2`);
+    return Number(/<KeyCount>(\d+)<\/KeyCount>/.exec(await res.text())![1]);
+  };
+  beforeEach(async () => {
+    baselineKeys = await bucketKeyCount();
+  });
+
   it('manager uploads png -> 201 ProductImage with /media urls that exist in s3', async () => {
     const res = await upload(await loginAs('manager'), await pngOf(2000, 1000));
     expect(res.status).toBe(201);
@@ -93,6 +103,7 @@ describe('product images (e2e)', () => {
     expect(res.status).toBe(413);
     expect(res.body).toMatchObject({ statusCode: 413, code: 'VALIDATION_FAILED' });
     expect(await rows()).toBe(0);
+    expect(await bucketKeyCount()).toBe(baselineKeys);
   });
 
   it('fake png -> 400 and nothing stored', async () => {
@@ -100,6 +111,19 @@ describe('product images (e2e)', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('VALIDATION_FAILED');
     expect(await rows()).toBe(0);
+    expect(await bucketKeyCount()).toBe(baselineKeys);
+  });
+
+  it('extra text field -> 400 and nothing stored', async () => {
+    const res = await request(server)
+      .post(URL)
+      .set('Cookie', await loginAs('manager'))
+      .set('X-Requested-With', 'fetch')
+      .field('note', 'x')
+      .attach('file', await pngOf(10, 10), 'a.png');
+    expect(res.status).toBe(400);
+    expect(await rows()).toBe(0);
+    expect(await bucketKeyCount()).toBe(baselineKeys);
   });
 
   it('without X-Requested-With -> 403 CSRF_REQUIRED', async () => {

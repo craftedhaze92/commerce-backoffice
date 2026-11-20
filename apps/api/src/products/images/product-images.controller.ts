@@ -17,7 +17,11 @@ export class ProductImagesController {
   @ApiBody({
     schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
   })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: PRODUCT_LIMITS.imageMaxBytes } }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: PRODUCT_LIMITS.imageMaxBytes, files: 1, fields: 0, parts: 2 },
+    }),
+  )
   upload(@UploadedFile() file: Express.Multer.File | undefined): Promise<ProductImage> {
     return this.service.upload(file?.buffer);
   }
