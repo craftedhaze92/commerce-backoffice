@@ -41,34 +41,52 @@ export function UsersPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.data
-            ? users.data.items.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>{ROLE_LABEL[u.role]}</TableCell>
-                  <TableCell>
-                    <Badge variant={u.isActive ? 'default' : 'secondary'}>
-                      {u.isActive ? '활성' : '비활성'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{kst(u.createdAt).format('YYYY.MM.DD')}</TableCell>
-                </TableRow>
-              ))
-            : [0, 1, 2].map((i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={5}>
-                    <Skeleton className="h-5 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+          {users.isPending ? (
+            [0, 1, 2].map((i) => (
+              <TableRow key={i}>
+                <TableCell colSpan={5}>
+                  <Skeleton className="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            ))
+          ) : users.isError ? (
+            !apiForbidden && (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <div role="alert" className="flex items-center justify-center gap-3 py-4">
+                    <span className="text-destructive text-sm">
+                      사용자 목록을 불러오지 못했습니다
+                    </span>
+                    <Button variant="outline" size="sm" onClick={() => void users.refetch()}>
+                      다시 시도
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          ) : users.data && users.data.items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-muted-foreground py-6 text-center text-sm">
+                사용자가 없습니다
+              </TableCell>
+            </TableRow>
+          ) : (
+            users.data?.items.map((u) => (
+              <TableRow key={u.id}>
+                <TableCell>{u.name}</TableCell>
+                <TableCell>{u.email}</TableCell>
+                <TableCell>{ROLE_LABEL[u.role]}</TableCell>
+                <TableCell>
+                  <Badge variant={u.isActive ? 'default' : 'secondary'}>
+                    {u.isActive ? '활성' : '비활성'}
+                  </Badge>
+                </TableCell>
+                <TableCell>{kst(u.createdAt).format('YYYY.MM.DD')}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
-      {users.isError && !apiForbidden && (
-        <p role="alert" className="text-destructive text-sm">
-          사용자 목록을 불러오지 못했습니다
-        </p>
-      )}
       <div className="flex items-center justify-end gap-3">
         <Button
           variant="outline"
@@ -79,7 +97,7 @@ export function UsersPage() {
           이전
         </Button>
         <span className="text-muted-foreground text-sm">
-          {page} / {totalPages}
+          {page} / {Math.max(totalPages, 1)}
         </span>
         <Button
           variant="outline"

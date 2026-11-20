@@ -89,4 +89,37 @@ describe('UsersPage', () => {
     expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
     expect(pages).toEqual(['1:20', '2:20']);
   });
+
+  it('shows an error row and refetches on retry', async () => {
+    let calls = 0;
+    server.use(
+      http.get('/api/v1/users', () => {
+        calls += 1;
+        return calls === 1
+          ? HttpResponse.json(
+              { statusCode: 500, code: 'INTERNAL', message: 'boom' },
+              { status: 500 },
+            )
+          : HttpResponse.json(page(1));
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<UsersPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('사용자 목록을 불러오지 못했습니다');
+    expect(replace).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByText('admin@demo.com')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows an empty state and 1 / 1 when there are no users', async () => {
+    server.use(
+      http.get('/api/v1/users', () =>
+        HttpResponse.json({ items: [], meta: { page: 1, size: 20, total: 0, totalPages: 0 } }),
+      ),
+    );
+    renderWithQuery(<UsersPage />);
+    expect(await screen.findByText('사용자가 없습니다')).toBeInTheDocument();
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+  });
 });
