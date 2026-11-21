@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMe } from '@/entities/session';
+import { useSessionMe } from '@/entities/session';
 import { LogoutButton } from '@/features/auth-logout';
 import { ROLE_LABEL } from '@/shared/lib/role-label';
 import { Badge } from '@/shared/ui/badge';
@@ -32,7 +32,7 @@ function SidebarSkeleton() {
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const { data: me, isPending } = useMe();
+  const { data: me, isPending } = useSessionMe();
 
   return (
     <Sidebar>

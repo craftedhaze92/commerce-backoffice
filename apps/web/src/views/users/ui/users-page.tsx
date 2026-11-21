@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
-import { useMe } from '@/entities/session';
+import { useSessionMe } from '@/entities/session';
 import { useUsers } from '@/entities/user';
 import { ApiError } from '@/shared/api';
 import { kst } from '@/shared/lib/dayjs';
@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export function UsersPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const me = useMe();
+  const me = useSessionMe();
   const forbidden = me.data !== undefined && !can(me.data.role, 'user:manage');
   const users = useUsers(page, { enabled: me.data !== undefined && !forbidden });
   const apiForbidden = users.error instanceof ApiError && users.error.status === 403;

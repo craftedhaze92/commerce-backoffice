@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
 import { useProduct } from '@/entities/product';
-import { useMe } from '@/entities/session';
+import { useSessionMe } from '@/entities/session';
 import { DeleteProductButton } from '@/features/delete-product';
 import { ProductForm } from '@/features/edit-product';
 import { ApiError } from '@/shared/api';
@@ -33,7 +33,7 @@ function FormSkeleton() {
 
 function CreateProduct() {
   const router = useRouter();
-  const me = useMe();
+  const me = useSessionMe();
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
   const forbidden = me.data !== undefined && !canWrite;
 
@@ -58,7 +58,7 @@ function CreateProduct() {
 
 function EditProduct({ id }: { id: string }) {
   const router = useRouter();
-  const me = useMe();
+  const me = useSessionMe();
   const product = useProduct(id);
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
 

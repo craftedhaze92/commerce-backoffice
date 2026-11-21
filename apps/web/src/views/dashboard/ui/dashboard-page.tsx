@@ -1,10 +1,10 @@
 'use client';
 
-import { useMe } from '@/entities/session';
+import { useSessionMe } from '@/entities/session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 
 export function DashboardPage() {
-  const { data: me } = useMe();
+  const { data: me } = useSessionMe();
 
   return (
     <Card>
