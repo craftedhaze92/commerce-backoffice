@@ -11,7 +11,7 @@ function setup(opts: { failPutAt?: number; failSave?: boolean }) {
       puts += 1;
       if (opts.failPutAt === puts) throw new Error('put failed');
     }),
-    delete: vi.fn(async () => undefined),
+    delete: vi.fn(async (_keys: string[]) => undefined),
   } satisfies ObjectStorage;
   const images = {
     create: vi.fn((v: object) => v),
@@ -29,7 +29,7 @@ describe('ProductImagesService cleanup', () => {
     await expect(service.upload(await pngOf(50, 50))).rejects.toThrow('put failed');
     expect(storage.put).toHaveBeenCalledTimes(2);
     expect(storage.delete).toHaveBeenCalledTimes(1);
-    const keys = storage.delete.mock.calls[0]![0] as string[];
+    const keys = storage.delete.mock.calls[0]![0];
     expect(keys).toHaveLength(2);
     expect(keys[0]).toMatch(/\.webp$/);
     expect(keys[1]).toMatch(/_thumb\.webp$/);

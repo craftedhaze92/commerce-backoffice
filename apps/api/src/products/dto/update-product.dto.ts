@@ -1,4 +1,4 @@
-import { OmitType } from '@nestjs/swagger';
+import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import type { Type } from '@nestjs/common';
 import { IsString, MaxLength, ValidateIf } from 'class-validator';
 import { PRODUCT_LIMITS } from '@bo/contracts';
@@ -15,11 +15,14 @@ export class UpdateProductDto extends (OmitType(CreateProductDto, [
   'initialStock',
 ]) as Type<UpdateFields>) {}
 
+const markOptional = ApiPropertyOptional();
 const skipWhenAbsent = ValidateIf((_, value) => value !== undefined);
 for (const key of ['sku', 'name', 'categoryId', 'price', 'status', 'safetyStock', 'images']) {
   skipWhenAbsent(UpdateProductDto.prototype, key);
+  markOptional(UpdateProductDto.prototype, key);
 }
 
 // CreateProductDto marks description @IsOptional (null-tolerant), so it is redeclared here.
 const description = [skipWhenAbsent, IsString(), MaxLength(PRODUCT_LIMITS.descriptionMax)];
+markOptional(UpdateProductDto.prototype, 'description');
 for (const decorate of description) decorate(UpdateProductDto.prototype, 'description');

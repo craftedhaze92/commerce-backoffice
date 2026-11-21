@@ -154,5 +154,17 @@ describe('rbac + csrf (e2e)', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body.paths)).toContain('/api/v1/users');
     expect(res.body.components.securitySchemes).toHaveProperty('bo_at');
+    const update = res.body.components.schemas.UpdateProductDto;
+    expect(update.required ?? []).toEqual([]);
+    expect(Object.keys(update.properties).sort()).toEqual([
+      'categoryId',
+      'description',
+      'images',
+      'name',
+      'price',
+      'safetyStock',
+      'sku',
+      'status',
+    ]);
   });
 });
