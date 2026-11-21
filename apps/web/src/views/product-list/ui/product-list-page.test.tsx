@@ -61,7 +61,7 @@ describe('ProductListPage', () => {
     expect(seen).toEqual(['']);
   });
 
-  it('viewer does not see 상품 등록; manager does', async () => {
+  it('manager sees 상품 등록 linking to /products/new', async () => {
     renderWithQuery(<ProductListPage />);
     const link = await screen.findByRole('link', { name: '상품 등록' });
     expect(link).toHaveAttribute('href', '/products/new');
@@ -92,6 +92,24 @@ describe('ProductListPage', () => {
       expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
       expect(getMockSearch()).not.toContain('page=');
       expect(input).toHaveValue('상품 3');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('초기화 cancels a pending search debounce even when URL q is empty', async () => {
+    renderWithQuery(<ProductListPage />);
+    await screen.findByText('테스트 상품 1');
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), 'a');
+      await user.click(screen.getByRole('button', { name: '초기화' }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300);
+      });
+      expect(getMockSearch()).toBe('');
+      expect(screen.getByRole('searchbox', { name: '상품 검색' })).toHaveValue('');
     } finally {
       vi.useRealTimers();
     }

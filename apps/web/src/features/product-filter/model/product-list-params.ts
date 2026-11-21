@@ -56,5 +56,5 @@ export function useProductListParams(): [
   (patch: ProductListPatch, opts?: UrlStatePatchOptions) => void,
 ] {
   const [params, set] = useUrlState(productListSchema);
-  return [params as ProductListParams, set];
+  return [params, set];
 }

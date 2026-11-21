@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { PRODUCT_LIMITS, ProductStatus } from '@bo/contracts';
 import { useCategories } from '@/entities/category';
 import { PRODUCT_STATUS_LABEL, type ProductListParams } from '@/entities/product';
@@ -22,10 +22,12 @@ interface ProductFilterBarProps {
 
 export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
   const categories = useCategories();
+  // 초기화 시 SearchInput을 다시 마운트해 입력 중인 글자와 대기 중인 디바운스를 함께 버린다
+  const [resetKey, setResetKey] = useState(0);
 
   return (
     <div className="flex flex-wrap items-start gap-3">
-      <SearchInput q={params.q} onCommit={(q) => onChange({ q })} />
+      <SearchInput key={resetKey} q={params.q} onCommit={(q) => onChange({ q })} />
       <Select
         value={params.categoryId ?? ALL}
         onValueChange={(v) => onChange({ categoryId: v === ALL ? undefined : v })}
@@ -73,7 +75,8 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
       </Toggle>
       <Button
         variant="ghost"
-        onClick={() =>
+        onClick={() => {
+          setResetKey((k) => k + 1);
           onChange({
             q: '',
             categoryId: undefined,
@@ -81,8 +84,8 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
             minPrice: undefined,
             maxPrice: undefined,
             lowStock: false,
-          })
-        }
+          });
+        }}
       >
         초기화
       </Button>
@@ -107,14 +110,19 @@ function SearchInput({ q, onCommit }: { q: string; onCommit: (q: string) => void
     }
   }
 
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  });
+
   useEffect(() => {
     if (text === committed) return;
     const timer = setTimeout(() => {
       setCommitted(text);
-      onCommit(text);
+      onCommitRef.current(text);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [text, committed, onCommit]);
+  }, [text, committed]);
 
   return (
     <Input
