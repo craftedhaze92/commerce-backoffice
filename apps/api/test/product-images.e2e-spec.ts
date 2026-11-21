@@ -78,6 +78,7 @@ describe('product images (e2e)', () => {
       const obj = await fetch(`${t.s3.endpoint}/${t.s3.bucket}/${u.replace('/media/', '')}`);
       expect(obj.status).toBe(200);
       expect(obj.headers.get('content-type')).toBe('image/webp');
+      expect(obj.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
     }
   });
 

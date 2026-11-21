@@ -30,7 +30,14 @@ export class S3ObjectStorage implements ObjectStorage {
 
   async put(key: string, body: Buffer, contentType: string): Promise<void> {
     await this.client.send(
-      new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }),
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        // 키에 UUID가 들어 있어 내용이 바뀌지 않는다
+        CacheControl: 'public, max-age=31536000, immutable',
+      }),
     );
   }
 
