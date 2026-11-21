@@ -24,6 +24,7 @@ function setup(over: Partial<React.ComponentProps<typeof ProductTable>> = {}) {
 
 describe('ProductTable', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     useColumnVisibility.getState().reset();
     window.localStorage.clear();
   });
@@ -50,23 +51,63 @@ describe('ProductTable', () => {
 
   it('clicking 가격 header cycles price:asc → price:desc → createdAt:desc via onSortChange', async () => {
     const user = userEvent.setup();
-    const a = setup({ sort: 'createdAt:desc' });
+    const onSortChange = vi.fn();
+    const props = {
+      data: productFixtures.slice(0, 2),
+      isPending: false,
+      isError: false,
+      onRetry: vi.fn(),
+      onSortChange,
+    };
+    const { rerender } = render(<ProductTable {...props} sort="createdAt:desc" />);
     await user.click(screen.getByRole('button', { name: /가격/ }));
-    expect(a.onSortChange).toHaveBeenLastCalledWith('price:asc');
+    expect(onSortChange).toHaveBeenLastCalledWith('price:asc');
+    rerender(<ProductTable {...props} sort="price:asc" />);
+    await user.click(screen.getByRole('button', { name: /가격/ }));
+    expect(onSortChange).toHaveBeenLastCalledWith('price:desc');
+    rerender(<ProductTable {...props} sort="price:desc" />);
+    await user.click(screen.getByRole('button', { name: /가격/ }));
+    expect(onSortChange).toHaveBeenLastCalledWith('createdAt:desc');
   });
 
-  it('cycles from price:asc to price:desc and from price:desc to default', async () => {
+  it('sorting a different column starts at asc', async () => {
     const user = userEvent.setup();
-    const a = setup({ sort: 'price:asc' });
+    const { onSortChange } = setup({ sort: 'name:asc' });
     await user.click(screen.getByRole('button', { name: /가격/ }));
-    expect(a.onSortChange).toHaveBeenLastCalledWith('price:desc');
+    expect(onSortChange).toHaveBeenLastCalledWith('price:asc');
   });
 
-  it('price:desc resets to createdAt:desc', async () => {
-    const user = userEvent.setup();
-    const a = setup({ sort: 'price:desc' });
-    await user.click(screen.getByRole('button', { name: /가격/ }));
-    expect(a.onSortChange).toHaveBeenLastCalledWith('createdAt:desc');
+  it('applies stored column visibility only after hydration (first render uses defaults)', async () => {
+    window.localStorage.setItem(
+      'bo:product-table-columns',
+      JSON.stringify({ state: { visible: { category: false } }, version: 1 }),
+    );
+    render(
+      <ProductTable
+        data={productFixtures.slice(0, 2)}
+        isPending={false}
+        isError={false}
+        onRetry={vi.fn()}
+        sort="createdAt:desc"
+        onSortChange={vi.fn()}
+      />,
+    );
+    // render()는 effect까지 act로 흘려보내므로 최종 상태는 숨김이다.
+    expect(screen.queryByRole('columnheader', { name: '카테고리' })).not.toBeInTheDocument();
+    expect(useColumnVisibility.getState().visible).toEqual({
+      thumbnail: true,
+      category: false,
+      updatedAt: true,
+    });
+  });
+
+  it('first render before rehydrate shows default columns', () => {
+    window.localStorage.setItem(
+      'bo:product-table-columns',
+      JSON.stringify({ state: { visible: { category: false } }, version: 1 }),
+    );
+    // 스토어는 skipHydration이라 rehydrate 전에는 기본값이다.
+    expect(useColumnVisibility.getState().visible.category).toBe(true);
   });
 
   it('exposes aria-sort on headers', () => {

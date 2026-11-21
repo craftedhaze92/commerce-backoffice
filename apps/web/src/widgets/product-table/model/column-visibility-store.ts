@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
@@ -47,7 +48,23 @@ export const useColumnVisibility = create<ColumnVisibilityState>()(
     {
       name: 'bo:product-table-columns',
       storage: createJSONStorage(() => safeStorage),
+      version: 1,
+      // 서버 렌더와 첫 클라이언트 렌더를 맞추려고 마운트 후 useHydrateColumnVisibility가 복원한다.
+      skipHydration: true,
       partialize: (s) => ({ visible: s.visible }),
+      // 나중에 컬럼이 추가돼도 저장값에 없는 키는 기본값을 쓴다.
+      merge: (persisted, current) => {
+        const stored = (persisted as Partial<Pick<ColumnVisibilityState, 'visible'>> | undefined)
+          ?.visible;
+        return { ...current, visible: { ...DEFAULT_VISIBLE, ...stored } };
+      },
     },
   ),
 );
+
+/** 마운트 직후 저장된 설정을 복원한다. skipHydration이라 SSR 결과와 첫 렌더가 같다. */
+export function useHydrateColumnVisibility(): void {
+  useEffect(() => {
+    void useColumnVisibility.persist.rehydrate();
+  }, []);
+}

@@ -13,7 +13,11 @@ import {
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { cn } from '@/shared/lib/utils';
-import { useColumnVisibility, type ToggleableColumn } from '../model/column-visibility-store';
+import {
+  useColumnVisibility,
+  useHydrateColumnVisibility,
+  type ToggleableColumn,
+} from '../model/column-visibility-store';
 import {
   ariaSortOf,
   COLUMN_LABEL,
@@ -47,6 +51,7 @@ export function ProductTable({
   // TanStack Table의 useReactTable은 메모이즈하면 안 되는 함수를 돌려준다. React Compiler 대상에서 뺀다.
   'use no memo';
 
+  useHydrateColumnVisibility();
   const visible = useColumnVisibility((s) => s.visible);
   const setVisible = useColumnVisibility((s) => s.setVisible);
 
