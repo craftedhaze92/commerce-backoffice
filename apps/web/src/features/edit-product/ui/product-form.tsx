@@ -26,6 +26,7 @@ import { ImageUploader } from './image-uploader';
 
 const SKU_CONFLICT_MESSAGE = '이미 사용 중인 SKU입니다';
 const GENERIC_ERROR_MESSAGE = '저장에 실패했습니다. 잠시 후 다시 시도해주세요';
+const UPLOAD_PENDING_HINT = '이미지 업로드가 끝난 뒤 저장할 수 있습니다';
 
 type FieldName = keyof ProductFormInput;
 const FIELD_NAMES = Object.keys(EMPTY_PRODUCT_FORM) as FieldName[];
@@ -60,6 +61,8 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
   const [formError, setFormError] = useState<string | null>(null);
   // 수정 화면에서 비교 기준이 되는 상세. 저장에 성공하면 응답으로 바꾼다.
   const [baseline, setBaseline] = useState(initial);
+  // 업로드가 끝나지 않은 이미지가 빠진 채 저장되지 않도록 업로드 중에는 저장을 막는다
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
@@ -93,6 +96,7 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
       isEdit && baseline
         ? { mode: 'edit' as const, id: baseline.id, input: diffUpdateInput(baseline, values) }
         : { mode: 'create' as const, input: toCreateInput(values) };
+    if (uploading) return;
     if (variables.mode === 'edit' && Object.keys(variables.input).length === 0) return;
 
     save.mutate(variables, {
@@ -237,7 +241,12 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
           control={control}
           name="images"
           render={({ field }) => (
-            <ImageUploader value={field.value} onChange={field.onChange} disabled={readOnly} />
+            <ImageUploader
+              value={field.value}
+              onChange={field.onChange}
+              disabled={readOnly}
+              onPendingChange={setUploading}
+            />
           )}
         />
         {errors.images && (
@@ -248,8 +257,11 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
       </div>
 
       {!readOnly && (
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={save.isPending || !hasChanges}>
+        <div className="flex items-center justify-end gap-3">
+          {uploading && (
+            <span className="text-muted-foreground text-xs">{UPLOAD_PENDING_HINT}</span>
+          )}
+          <Button type="submit" size="lg" disabled={save.isPending || uploading || !hasChanges}>
             {save.isPending ? '저장 중...' : '저장'}
           </Button>
         </div>

@@ -62,7 +62,8 @@ function EditProduct({ id }: { id: string }) {
   const product = useProduct(id);
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
 
-  if (product.isPending) {
+  // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
+  if (product.isPending || me.isPending) {
     return (
       <section className="flex flex-col gap-4">
         <Skeleton className="h-7 w-48" />

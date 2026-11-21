@@ -20,6 +20,8 @@ interface ImageUploaderProps {
   value: ProductImage[];
   onChange: (images: ProductImage[]) => void;
   disabled?: boolean;
+  /** 업로드 중인 파일이 생기면 true, 모두 끝나면 false로 알린다. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
 interface PendingUpload {
@@ -27,7 +29,12 @@ interface PendingUpload {
   name: string;
 }
 
-export function ImageUploader({ value, onChange, disabled = false }: ImageUploaderProps) {
+export function ImageUploader({
+  value,
+  onChange,
+  disabled = false,
+  onPendingChange,
+}: ImageUploaderProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadImage();
@@ -38,6 +45,8 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
   // 동시에 끝나는 업로드가 서로의 결과를 덮어쓰지 않도록 가장 최근 목록을 따로 들고 있는다
   const latest = useRef(value);
   const nextKey = useRef(0);
+  // 렌더를 기다리지 않고 바로 세는 업로드 중 개수. 연달아 고른 파일이 10장을 넘지 않게 한다.
+  const pendingCount = useRef(0);
   useEffect(() => {
     latest.current = value;
   }, [value]);
@@ -50,7 +59,7 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
   function addFiles(files: File[]) {
     const nextErrors: string[] = [];
     const accepted: File[] = [];
-    let slots = PRODUCT_LIMITS.imageMaxCount - latest.current.length - pending.length;
+    let slots = PRODUCT_LIMITS.imageMaxCount - latest.current.length - pendingCount.current;
     let overLimit = false;
     for (const file of files) {
       if (!MIME_TYPES.includes(file.type)) {
@@ -69,6 +78,8 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
     if (accepted.length === 0) return;
 
     const jobs = accepted.map((file) => ({ key: nextKey.current++, file }));
+    if (pendingCount.current === 0) onPendingChange?.(true);
+    pendingCount.current += jobs.length;
     setPending((p) => [...p, ...jobs.map(({ key, file }) => ({ key, name: file.name }))]);
     void runWithConcurrency(jobs, UPLOAD_CONCURRENCY, async ({ key, file }) => {
       try {
@@ -78,6 +89,8 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
         setErrors((e) => [...e, `${file.name}: 업로드에 실패했습니다`]);
       } finally {
         setPending((p) => p.filter((u) => u.key !== key));
+        pendingCount.current -= 1;
+        if (pendingCount.current === 0) onPendingChange?.(false);
       }
     });
   }
@@ -179,7 +192,7 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
                       size="xs"
                       aria-label={`${n}번 이미지 앞으로`}
                       disabled={index === 0}
-                      onClick={() => commit(moveImage(value, index, index - 1))}
+                      onClick={() => commit(moveImage(latest.current, index, index - 1))}
                     >
                       앞으로
                     </Button>
@@ -189,7 +202,7 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
                       size="xs"
                       aria-label={`${n}번 이미지 뒤로`}
                       disabled={index === value.length - 1}
-                      onClick={() => commit(moveImage(value, index, index + 1))}
+                      onClick={() => commit(moveImage(latest.current, index, index + 1))}
                     >
                       뒤로
                     </Button>
@@ -199,7 +212,7 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
                         variant="outline"
                         size="xs"
                         aria-label={`${n}번 이미지 대표로 지정`}
-                        onClick={() => commit(setPrimaryImage(value, img.id))}
+                        onClick={() => commit(setPrimaryImage(latest.current, img.id))}
                       >
                         대표로 지정
                       </Button>
@@ -209,7 +222,7 @@ export function ImageUploader({ value, onChange, disabled = false }: ImageUpload
                       variant="destructive"
                       size="xs"
                       aria-label={`${n}번 이미지 삭제`}
-                      onClick={() => commit(removeImage(value, img.id))}
+                      onClick={() => commit(removeImage(latest.current, img.id))}
                     >
                       삭제
                     </Button>

@@ -284,4 +284,72 @@ describe('ProductEditPage', () => {
     expect(await screen.findByText('상품을 찾을 수 없습니다')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '목록으로' })).toHaveAttribute('href', '/products');
   });
+  /** 업로드 응답을 release()를 부를 때까지 붙잡아 둔다. */
+  function holdUploads() {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    server.use(
+      http.post('/api/v1/products/images', async () => {
+        await gate;
+        return HttpResponse.json(uploadedImage('held.png'), { status: 201 });
+      }),
+    );
+    return () => release();
+  }
+
+  const UPLOAD_HINT = '이미지 업로드가 끝난 뒤 저장할 수 있습니다';
+
+  it('create: 저장 is disabled with a hint while an upload is pending', async () => {
+    const release = holdUploads();
+    const post = capture('post', '/api/v1/products', (b) =>
+      HttpResponse.json(created(b), { status: 201 }),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<ProductEditPage />);
+    await screen.findByLabelText('SKU');
+    await fillCreateForm(user);
+    expect(screen.queryByText(UPLOAD_HINT)).not.toBeInTheDocument();
+    await user.upload(screen.getByLabelText('파일 선택'), [png('held.png')]);
+    expect(await screen.findByText(UPLOAD_HINT)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(post.calls).toBe(0);
+
+    release();
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled());
+    expect(screen.queryByText(UPLOAD_HINT)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+  });
+
+  it('edit: 저장 is disabled with a hint while an upload is pending', async () => {
+    const release = holdUploads();
+    const user = userEvent.setup();
+    renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+    await screen.findByLabelText('상품명');
+    await user.upload(screen.getByLabelText('파일 선택'), [png('held.png')]);
+    expect(await screen.findByText(UPLOAD_HINT)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+
+    release();
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled());
+    expect(screen.queryByText(UPLOAD_HINT)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('img')).toHaveLength(3);
+  });
+
+  it('manager never sees a read-only form while the session is loading', async () => {
+    let releaseMe!: () => void;
+    const meGate = new Promise<void>((r) => (releaseMe = r));
+    server.use(
+      http.get('/api/v1/auth/me', async () => {
+        await meGate;
+        return HttpResponse.json(me(Role.MANAGER));
+      }),
+    );
+    renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+    // 상품은 먼저 도착해도 세션을 알기 전까지는 폼을 그리지 않는다
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByLabelText('상품명')).not.toBeInTheDocument();
+    releaseMe();
+    expect(await screen.findByLabelText('상품명')).toBeEnabled();
+  });
 });
