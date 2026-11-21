@@ -131,7 +131,7 @@ export function ProductTable({
         <TableBody>
           {isPending ? (
             SKELETON_ROWS.map((i) => (
-              <TableRow key={i} data-testid="product-skeleton-row">
+              <TableRow key={i} data-testid="product-skeleton-row" aria-busy="true">
                 <TableCell colSpan={colSpan}>
                   <Skeleton className="h-10 w-full" />
                 </TableCell>

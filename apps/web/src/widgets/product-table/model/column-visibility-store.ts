@@ -6,6 +6,7 @@ export type ToggleableColumn = 'thumbnail' | 'category' | 'updatedAt';
 export type ColumnVisibility = Record<ToggleableColumn, boolean>;
 
 const DEFAULT_VISIBLE: ColumnVisibility = { thumbnail: true, category: true, updatedAt: true };
+const COLUMN_KEYS = Object.keys(DEFAULT_VISIBLE) as ToggleableColumn[];
 
 /** localStorage 접근이 막힌 환경(프라이빗 모드 등)에서도 터지지 않게 감싼다. */
 const safeStorage: StateStorage = {
@@ -54,9 +55,16 @@ export const useColumnVisibility = create<ColumnVisibilityState>()(
       partialize: (s) => ({ visible: s.visible }),
       // 나중에 컬럼이 추가돼도 저장값에 없는 키는 기본값을 쓴다.
       merge: (persisted, current) => {
-        const stored = (persisted as Partial<Pick<ColumnVisibilityState, 'visible'>> | undefined)
-          ?.visible;
-        return { ...current, visible: { ...DEFAULT_VISIBLE, ...stored } };
+        // 저장값은 사용자가 건드릴 수 있으니 알려진 키 중 boolean인 것만 받는다.
+        const stored: unknown = (persisted as { visible?: unknown } | null | undefined)?.visible;
+        const visible = { ...DEFAULT_VISIBLE };
+        if (typeof stored === 'object' && stored !== null) {
+          for (const key of COLUMN_KEYS) {
+            const value = (stored as Record<string, unknown>)[key];
+            if (typeof value === 'boolean') visible[key] = value;
+          }
+        }
+        return { ...current, visible };
       },
     },
   ),

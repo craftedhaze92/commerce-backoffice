@@ -101,6 +101,22 @@ describe('ProductTable', () => {
     });
   });
 
+  it('ignores corrupt stored values and unknown keys', () => {
+    window.localStorage.setItem(
+      'bo:product-table-columns',
+      JSON.stringify({
+        state: { visible: { category: 'no', thumbnail: false, updatedAt: 0, bogus: false } },
+        version: 1,
+      }),
+    );
+    void useColumnVisibility.persist.rehydrate();
+    expect(useColumnVisibility.getState().visible).toEqual({
+      thumbnail: false,
+      category: true,
+      updatedAt: true,
+    });
+  });
+
   it('first render before rehydrate shows default columns', () => {
     window.localStorage.setItem(
       'bo:product-table-columns',
@@ -135,6 +151,9 @@ describe('ProductTable', () => {
   it('shows skeleton while pending', () => {
     setup({ isPending: true, data: undefined });
     expect(screen.getAllByTestId('product-skeleton-row').length).toBeGreaterThan(0);
+    for (const row of screen.getAllByTestId('product-skeleton-row')) {
+      expect(row).toHaveAttribute('aria-busy', 'true');
+    }
     expect(screen.queryByText('조건에 맞는 상품이 없습니다')).not.toBeInTheDocument();
   });
 
