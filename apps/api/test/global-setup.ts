@@ -54,7 +54,9 @@ export default async function setup(project: TestProject): Promise<() => Promise
 
     const url = new URL(pg.getConnectionUri());
     url.pathname = `/${TEMPLATE_DB}`;
-    const migrator = new DataSource(buildDataSourceOptions({ DATABASE_URL: url.toString() } as Env));
+    const migrator = new DataSource(
+      buildDataSourceOptions({ DATABASE_URL: url.toString() } as Env),
+    );
     await migrator.initialize();
     await migrator.runMigrations();
     await migrator.destroy();

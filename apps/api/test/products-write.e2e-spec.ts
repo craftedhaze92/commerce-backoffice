@@ -196,6 +196,18 @@ describe('products write (e2e)', () => {
     expect(res.body.updatedAt).not.toBe(created.updatedAt);
   });
 
+  it.each(['sku', 'name', 'categoryId', 'price', 'status', 'safetyStock', 'images', 'description'])(
+    'PATCH {"%s": null} -> 400 VALIDATION_FAILED and nothing changes',
+    async (field) => {
+      const created = (await post(body())).body as ProductDetail;
+      const res = await patch(created.id, { [field]: null });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_FAILED');
+      expect((res.body.details as { field: string }[]).map((d) => d.field)).toContain(field);
+      expect((await get(created.id)).body).toEqual(created);
+    },
+  );
+
   it('PATCH images replaces set; removed image becomes unattached; no images leaves them', async () => {
     const [a, b, c] = [await newImage(), await newImage(), await newImage()];
     const created = (

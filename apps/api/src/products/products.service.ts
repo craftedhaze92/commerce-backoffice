@@ -135,9 +135,14 @@ export class ProductsService {
         if (v != null) (product as unknown as Record<string, unknown>)[k] = v;
       }
       if (refs != null) {
-        await this.lockImages(m, refs, id);
-        const keep = new Set(refs.map((r) => r.id));
         const current = await m.find(ProductImage, { where: { productId: id } });
+        await this.lockImages(
+          m,
+          refs,
+          id,
+          current.map((img) => img.id),
+        );
+        const keep = new Set(refs.map((r) => r.id));
         for (const img of current) {
           if (!keep.has(img.id)) {
             await m.update(ProductImage, img.id, {
@@ -196,11 +201,16 @@ export class ProductsService {
     ]);
   }
 
-  /** Validates refs and row-locks the images; `ownerId` is the product they may already belong to. */
+  /**
+   * Validates refs and row-locks the images; `ownerId` is the product they may already belong to.
+   * `heldIds` (images currently attached, about to be detached or kept) are locked in the same
+   * id-ordered statement so concurrent writers always acquire image locks in one global order.
+   */
   private async lockImages(
     m: EntityManager,
     refs: ProductImageRef[],
     ownerId: string | null,
+    heldIds: string[] = [],
   ): Promise<void> {
     if (refs.length > PRODUCT_LIMITS.imageMaxCount) {
       throw this.invalidImages(`at most ${PRODUCT_LIMITS.imageMaxCount} images`);
@@ -210,15 +220,18 @@ export class ProductsService {
     if (refs.length > 0 && refs.filter((r) => r.isPrimary).length !== 1) {
       throw this.invalidImages('exactly one primary image is required');
     }
-    if (refs.length === 0) return;
+    const lockIds = [...new Set([...ids, ...heldIds])];
+    if (lockIds.length === 0) return;
     const rows = await m
       .createQueryBuilder(ProductImage, 'img')
       .setLock('pessimistic_write')
-      .where('img.id IN (:...ids)', { ids })
+      .where('img.id IN (:...lockIds)', { lockIds })
       .orderBy('img.id')
       .getMany();
-    if (rows.length !== ids.length) throw this.invalidImages('image not found');
-    if (rows.some((r) => r.productId !== null && r.productId !== ownerId)) {
+    const refIds = new Set(ids);
+    const refRows = rows.filter((r) => refIds.has(r.id));
+    if (refRows.length !== ids.length) throw this.invalidImages('image not found');
+    if (refRows.some((r) => r.productId !== null && r.productId !== ownerId)) {
       throw this.invalidImages('image is attached to another product');
     }
   }
