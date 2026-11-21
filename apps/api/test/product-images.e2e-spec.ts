@@ -51,7 +51,7 @@ describe('product images (e2e)', () => {
   const rows = async () =>
     Number((await t.dataSource.query('SELECT count(*) FROM product_images'))[0].count);
 
-  // The bucket is shared by every test, so "nothing stored" is measured against a per-test baseline.
+  // This file's bucket is shared by its tests, so "nothing stored" is measured against a per-test baseline.
   let baselineKeys = 0;
   const bucketKeyCount = async () => {
     const res = await fetch(`${t.s3.endpoint}/${t.s3.bucket}?list-type=2`);

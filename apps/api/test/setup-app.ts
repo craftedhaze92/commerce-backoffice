@@ -1,13 +1,12 @@
+import { randomBytes } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import { GenericContainer, Wait } from 'testcontainers';
 import { DataSource } from 'typeorm';
+import { inject } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { validateEnv } from '../src/config/env.js';
-
-const S3_BUCKET = 'bo-media';
+import { TEMPLATE_DB } from './global-setup.js';
 
 export interface TestApp {
   app: INestApplication;
@@ -16,62 +15,63 @@ export interface TestApp {
   stop(): Promise<void>;
 }
 
-/** Boots the real AppModule (same wiring as main.ts) against a throwaway Postgres container. */
+/**
+ * Boots the real AppModule (same wiring as main.ts) on its own database (cloned from the
+ * migrated template) and its own S3 bucket. Containers are shared and started by global-setup.ts.
+ */
 export async function createTestApp(): Promise<TestApp> {
-  const [pgResult, s3Result] = await Promise.allSettled([
-    new PostgreSqlContainer('postgres:16-alpine').start(),
-    new GenericContainer('adobe/s3mock:4.11.0')
-      .withExposedPorts(9090)
-      .withEnvironment({ COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: S3_BUCKET })
-      .withWaitStrategy(Wait.forHttp('/', 9090).forStatusCodeMatching((c) => c < 500))
-      .start(),
-  ]);
-  if (pgResult.status === 'rejected' || s3Result.status === 'rejected') {
-    if (pgResult.status === 'fulfilled') await pgResult.value.stop();
-    if (s3Result.status === 'fulfilled') await s3Result.value.stop();
-    throw pgResult.status === 'rejected'
-      ? pgResult.reason
-      : (s3Result as PromiseRejectedResult).reason;
-  }
-  const container = pgResult.value;
-  const s3Container = s3Result.value;
-  const s3Endpoint = `http://${s3Container.getHost()}:${s3Container.getMappedPort(9090)}`;
-  Object.assign(process.env, {
-    S3_ENDPOINT: s3Endpoint,
-    S3_REGION: 'us-east-1',
-    S3_BUCKET,
-    S3_ACCESS_KEY_ID: 'test',
-    S3_SECRET_ACCESS_KEY: 'test',
-    S3_FORCE_PATH_STYLE: 'true',
-    NODE_ENV: 'test',
-    DATABASE_URL: container.getConnectionUri(),
-    JWT_SECRET: 'test-secret-test-secret-test-secret-0123',
-    WEB_ORIGIN: 'http://localhost:3000',
-  });
+  const infra = inject('infra');
+  const suffix = randomBytes(6).toString('hex');
+  const dbName = `bo_test_${suffix}`;
+  const bucket = `bo-media-${suffix}`;
+  const baseUrl = (db: string) =>
+    `postgres://${encodeURIComponent(infra.pgUser)}:${encodeURIComponent(infra.pgPassword)}@${infra.pgHost}:${infra.pgPort}/${db}`;
+
+  const admin = new DataSource({ type: 'postgres', url: baseUrl('postgres') });
+  await admin.initialize();
+  const dropDb = async () => {
+    await admin.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
+    await admin.destroy();
+  };
 
   let app: INestApplication | undefined;
   try {
+    await admin.query(`CREATE DATABASE "${dbName}" TEMPLATE "${TEMPLATE_DB}"`);
+    const created = await fetch(`${infra.s3Endpoint}/${bucket}`, { method: 'PUT' });
+    if (!created.ok) throw new Error(`CreateBucket ${bucket} failed: ${created.status}`);
+
+    Object.assign(process.env, {
+      S3_ENDPOINT: infra.s3Endpoint,
+      S3_REGION: 'us-east-1',
+      S3_BUCKET: bucket,
+      S3_ACCESS_KEY_ID: 'test',
+      S3_SECRET_ACCESS_KEY: 'test',
+      S3_FORCE_PATH_STYLE: 'true',
+      NODE_ENV: 'test',
+      DATABASE_URL: baseUrl(dbName),
+      JWT_SECRET: 'test-secret-test-secret-test-secret-0123',
+      WEB_ORIGIN: 'http://localhost:3000',
+    });
+
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     configureApp(app, validateEnv(process.env));
     await app.init();
-    await app.get(DataSource).runMigrations();
   } catch (err) {
     await app?.close().catch(() => undefined);
-    await Promise.all([container.stop(), s3Container.stop()]);
+    await dropDb().catch(() => undefined);
     throw err;
   }
 
-  const dataSource = app.get(DataSource);
   const startedApp = app;
 
   return {
     app: startedApp,
-    dataSource,
-    s3: { endpoint: s3Endpoint, bucket: S3_BUCKET },
+    dataSource: startedApp.get(DataSource),
+    s3: { endpoint: infra.s3Endpoint, bucket },
     async stop() {
       await startedApp.close();
-      await Promise.all([container.stop(), s3Container.stop()]);
+      await dropDb();
     },
   };
 }
