@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,6 +16,7 @@ export class ProductImage {
   id: string;
 
   /** Null while an uploaded image is not yet attached to a product. */
+  @Index('IDX_product_images_productId')
   @Column({ type: 'uuid', nullable: true })
   productId: string | null;
 
