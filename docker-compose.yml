@@ -21,7 +21,7 @@ services:
     environment:
       COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: bo-media
     ports:
-      - '9090:9090'
+      - '${S3MOCK_PORT:-9090}:9090'
 
 volumes:
   pgdata:

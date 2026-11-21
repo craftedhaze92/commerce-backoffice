@@ -259,7 +259,9 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
       {!readOnly && (
         <div className="flex items-center justify-end gap-3">
           {uploading && (
-            <span className="text-muted-foreground text-xs">{UPLOAD_PENDING_HINT}</span>
+            <span role="status" className="text-muted-foreground text-xs">
+              {UPLOAD_PENDING_HINT}
+            </span>
           )}
           <Button type="submit" size="lg" disabled={save.isPending || uploading || !hasChanges}>
             {save.isPending ? '저장 중...' : '저장'}

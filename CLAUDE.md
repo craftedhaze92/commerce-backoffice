@@ -84,6 +84,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build && pnpm 
   - `bo_rt`: httpOnly, Strict, `Path=/api/v1/auth`
   - `Secure`는 production에서만
 - JwtStrategy는 매 요청 DB에서 사용자를 다시 읽는다. 그래서 비활성화와 역할 변경이 바로 반영된다.
+- 오브젝트 스토리지는 `storage/`의 `ObjectStorage`를 `OBJECT_STORAGE` 토큰으로 주입받아 쓴다. AWS SDK는 그 밖에서 호출하지 않는다. 이미지 URL은 `/media/{key}`다.
 
 **DB:**
 
@@ -131,6 +132,7 @@ app → views → widgets → features → entities → shared   (단방향, esl
 
 - 테스트 파일은 대상 옆에 둔다: Web·contracts는 `*.test.ts(x)`, API 단위는 `*.spec.ts`. API e2e는 `apps/api/test/*.e2e-spec.ts`.
 - API e2e는 `createTestApp()`(`test/setup-app.ts`)으로 실제 `AppModule`을 Testcontainers Postgres 위에 띄운다. 테스트끼리 상태를 공유하지 않는다(`beforeEach`에서 TRUNCATE, 원복은 `try/finally`).
+- API e2e는 Vitest globalSetup이 Postgres·s3mock 컨테이너를 실행당 하나씩 띄워 공유하고, `createTestApp()`이 파일마다 DB와 버킷을 따로 만든다.
 - Web은 MSW로 네트워크를 흉내 낸다(`onUnhandledRequest: 'error'`). `http`를 mock하지 말고 핸들러를 `server.use()`로 바꾼다.
 - 트랜잭션, 권한, 동시성처럼 틀리면 안 되는 로직은 실제 DB로 검증한다.
 - 테스트 출력에 경고가 없어야 한다(act 경고 포함).
