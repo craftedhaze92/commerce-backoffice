@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { PRODUCT_LIMITS, type ProductImage } from '@bo/contracts';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { ApiError } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
 import { moveImage, normalizeImages, removeImage, setPrimaryImage } from '../lib/image-list';
 import { runWithConcurrency } from '../lib/run-with-concurrency';
@@ -14,6 +15,19 @@ const UPLOAD_CONCURRENCY = 3;
 const ACCEPT = PRODUCT_LIMITS.imageMimeTypes.join(',');
 const MIME_TYPES: readonly string[] = PRODUCT_LIMITS.imageMimeTypes;
 const MAX_MB = PRODUCT_LIMITS.imageMaxBytes / (1024 * 1024);
+
+/** 서버가 준 검증 메시지가 있으면 그것을, 413이면 크기 안내를, 아니면 일반 문구를 쓴다. */
+function uploadErrorMessage(fileName: string, err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 413) return `${fileName}: ${MAX_MB}MB를 넘습니다`;
+    if (Array.isArray(err.details)) {
+      const first = (err.details[0] as { messages?: unknown } | undefined)?.messages;
+      if (Array.isArray(first) && typeof first[0] === 'string') return `${fileName}: ${first[0]}`;
+    }
+  }
+  return `${fileName}: 업로드에 실패했습니다`;
+}
+
 const COUNT_ERROR = `최대 ${PRODUCT_LIMITS.imageMaxCount}장까지 등록할 수 있습니다`;
 
 interface ImageUploaderProps {
@@ -85,8 +99,8 @@ export function ImageUploader({
       try {
         const image = await upload.mutateAsync(file);
         commit(normalizeImages([...latest.current, { ...image, isPrimary: false }]));
-      } catch {
-        setErrors((e) => [...e, `${file.name}: 업로드에 실패했습니다`]);
+      } catch (err) {
+        setErrors((e) => [...e, uploadErrorMessage(file.name, err)]);
       } finally {
         setPending((p) => p.filter((u) => u.key !== key));
         pendingCount.current -= 1;

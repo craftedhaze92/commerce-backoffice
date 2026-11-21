@@ -129,6 +129,42 @@ describe('ImageUploader', () => {
     await waitFor(() => expect(state()).toEqual([['img-ok.png', true, 0]]));
   });
 
+  it('shows the server validation message for a 400 on that file', async () => {
+    server.use(
+      http.post('/api/v1/products/images', () =>
+        HttpResponse.json(
+          {
+            statusCode: 400,
+            code: 'VALIDATION_FAILED',
+            message: 'x',
+            details: [{ field: 'file', messages: ['이미지 파일이 아닙니다'] }],
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<Harness />);
+    await user.upload(screen.getByLabelText('파일 선택'), [png('fake.png')]);
+    expect(await screen.findByText('fake.png: 이미지 파일이 아닙니다')).toBeInTheDocument();
+    expect(state()).toEqual([]);
+  });
+
+  it('shows the size message for a 413', async () => {
+    server.use(
+      http.post('/api/v1/products/images', () =>
+        HttpResponse.json(
+          { statusCode: 413, code: 'VALIDATION_FAILED', message: 'too large' },
+          { status: 413 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<Harness />);
+    await user.upload(screen.getByLabelText('파일 선택'), [png('huge.png')]);
+    expect(await screen.findByText('huge.png: 5MB를 넘습니다')).toBeInTheDocument();
+  });
+
   it('limits to 10 images in total', async () => {
     const { names } = recordUploads(['a.png']);
     const user = userEvent.setup();
