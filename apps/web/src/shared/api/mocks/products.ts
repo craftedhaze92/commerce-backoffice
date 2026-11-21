@@ -88,8 +88,6 @@ const notFound: ApiErrorBody = {
   message: '상품을 찾을 수 없습니다',
 };
 
-let uploadSeq = 0;
-
 /** 상품 API 기본 핸들러. page·size·q·status만 흉내 낸다. */
 export const productHandlers = [
   http.get('/api/v1/categories', () => HttpResponse.json(categoryFixtures)),
@@ -117,11 +115,11 @@ export const productHandlers = [
     return HttpResponse.json({ ...item, description: '', images: [] } satisfies ProductDetail);
   }),
   http.post('/api/v1/products/images', () => {
-    uploadSeq += 1;
+    const id = crypto.randomUUID();
     const image: ProductImage = {
-      id: uuid(uploadSeq, 'f000'),
-      url: `/media/uploads/${uploadSeq}.webp`,
-      thumbUrl: `/media/uploads/${uploadSeq}-thumb.webp`,
+      id,
+      url: `/media/uploads/${id}.webp`,
+      thumbUrl: `/media/uploads/${id}-thumb.webp`,
       width: 800,
       height: 800,
       sortOrder: 0,

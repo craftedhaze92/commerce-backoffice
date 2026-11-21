@@ -8,7 +8,7 @@ interface DataPaginationProps {
 
 export function DataPagination({ page, totalPages, onPageChange }: DataPaginationProps) {
   return (
-    <div className="flex items-center justify-end gap-3">
+    <nav aria-label="페이지 이동" className="flex items-center justify-end gap-3">
       <Button
         variant="outline"
         size="sm"
@@ -28,6 +28,6 @@ export function DataPagination({ page, totalPages, onPageChange }: DataPaginatio
       >
         다음
       </Button>
-    </div>
+    </nav>
   );
 }

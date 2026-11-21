@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { z } from 'zod';
 import { useUrlState } from './url-state';
 
@@ -54,5 +54,14 @@ describe('useUrlState', () => {
     const { result } = renderHook(() => useUrlState(schema));
     result.current[1]({ page: 1 }, { resetPage: false });
     expect(replace).toHaveBeenCalledWith('/products', { scroll: false });
+  });
+
+  it('two set() calls before a re-render both land in the final URL', () => {
+    const { result } = renderHook(() => useUrlState(schema));
+    act(() => {
+      result.current[1]({ q: 'shoe' });
+      result.current[1]({ page: 2 }, { resetPage: false });
+    });
+    expect(replace).toHaveBeenLastCalledWith('/products?q=shoe&page=2', { scroll: false });
   });
 });

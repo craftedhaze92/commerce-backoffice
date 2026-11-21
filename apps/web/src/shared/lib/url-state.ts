@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { z } from 'zod';
 
@@ -21,6 +21,11 @@ export function useUrlState<S extends z.ZodType>(
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
+  // router.replace 이후 리렌더 전에 set()이 또 불려도 앞선 변경 위에 쌓이도록 최신 쿼리를 들고 있는다
+  const latest = useRef(search);
+  useEffect(() => {
+    latest.current = search;
+  }, [search]);
 
   const value = useMemo(
     () => schema.parse(Object.fromEntries(new URLSearchParams(search))) as z.output<S>,
@@ -32,7 +37,7 @@ export function useUrlState<S extends z.ZodType>(
       const { resetPage = true } = opts;
       const defaults = schema.parse({}) as Record<string, unknown>;
       const merged: Record<string, unknown> = {
-        ...Object.fromEntries(new URLSearchParams(search)),
+        ...Object.fromEntries(new URLSearchParams(latest.current)),
         ...patch,
       };
       if (resetPage && !('page' in patch)) delete merged.page;
@@ -46,9 +51,10 @@ export function useUrlState<S extends z.ZodType>(
         qs.set(key, String(raw));
       }
       const query = qs.toString();
+      latest.current = query;
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
-    [schema, search, router, pathname],
+    [schema, router, pathname],
   );
 
   return [value, set];
