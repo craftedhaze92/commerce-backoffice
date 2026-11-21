@@ -11,4 +11,10 @@ describe('visibleMenu', () => {
     ]));
   it('ADMIN sees users', () =>
     expect(visibleMenu(Role.ADMIN).map((m) => m.href)).toContain('/users'));
+  it('only orders is coming soon', () =>
+    expect(
+      visibleMenu(Role.ADMIN)
+        .filter((m) => m.comingSoon)
+        .map((m) => m.href),
+    ).toEqual(['/orders']));
 });
