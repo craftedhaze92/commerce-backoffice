@@ -23,7 +23,7 @@ cp .env.example .env
 # 2. 의존성 설치
 pnpm install
 
-# 3. DB·스토리지 기동, 마이그레이션, 시드 (상품 이미지가 있어 스토리지가 필요하다)
+# 3. DB·스토리지 기동, 마이그레이션, 시드 (스토리지는 이미지 업로드에만 필요하다. 시드에는 필요 없다)
 pnpm db:up:storage && pnpm db:migrate && pnpm db:seed
 
 # 4. 개발 서버 (web :3000, api :4000)
@@ -48,7 +48,7 @@ pnpm dev
 
 비밀번호는 `.env`의 `SEED_PASSWORD`로 바꿀 수 있다. 로그인 화면의 데모 계정 버튼은 고정 비밀번호 `demo1234!`를 쓰므로, 이를 바꾸면 버튼 로그인은 실패한다(기본 `SEED_PASSWORD`와 일치).
 
-> Web의 `/api/v1` 프록시 대상 `API_ORIGIN`은 Next가 `apps/web/.env*`에서 읽는다. 루트 `.env`는 Next가 로드하지 않으며, 기본값(`http://localhost:4000`)이 로컬 API와 일치하므로 보통 설정할 필요가 없다.
+> Web의 rewrite 대상인 `API_ORIGIN`(`/api/*`)과 `MEDIA_ORIGIN`(`/media/*`)은 Next가 `apps/web/.env*` 또는 프로세스 환경 변수에서 읽는다. 루트 `.env`는 Next가 로드하지 않는다(`.env.example`의 두 값은 참고용이다). rewrite는 `next.config.ts`가 평가될 때(`next dev` 시작, `next build`) 정해지므로 값을 바꾸면 Web을 다시 시작(프로덕션은 다시 빌드)해야 한다. 기본값이 로컬 환경과 일치하므로 보통 설정할 필요가 없다.
 
 ## 주요 스크립트
 

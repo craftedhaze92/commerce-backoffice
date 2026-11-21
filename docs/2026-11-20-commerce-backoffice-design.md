@@ -264,6 +264,7 @@ PENDING ──확정──▶ CONFIRMED ──출고──▶ SHIPPED ──완�
 4. MinIO에 `products/{yyyy}/{mm}/{uuid}.webp` 형태로 저장한다. `ProductImage`는 `productId = null` 상태로 만든다.
 5. 상품 저장 시 이미지 id 배열(순서, 대표 여부 포함)을 함께 보내 연결한다.
 6. 고아 이미지(연결 안 된 지 24시간 지난 것)는 `@nestjs/schedule` 크론으로 정리한다. **[선택 — 시간 남으면]**
+   M6에서 구현할 때 정리 대상은 세 곳이다: 저장하지 않고 떠난 업로드(`productId`가 null), PATCH로 상품에서 떼어낸 이미지, 소프트 삭제된 상품에 붙은 이미지. 셋 다 DB 행과 오브젝트 스토리지 키를 함께 지워야 한다.
 
 ## 10. 엑셀 다운로드
 
