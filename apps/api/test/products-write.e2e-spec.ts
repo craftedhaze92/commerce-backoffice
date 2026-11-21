@@ -118,6 +118,30 @@ describe('products write (e2e)', () => {
     expect(res.body.code).toBe('CSRF_REQUIRED');
   });
 
+  it.each(['patch', 'delete'] as const)('viewer %s -> 403 and product unchanged', async (verb) => {
+    const created = await post(body());
+    const id = (created.body as ProductDetail).id;
+    const req = request(server)
+      [verb](`${URL}/${id}`)
+      .set('Cookie', cookies.viewer!)
+      .set('X-Requested-With', 'fetch');
+    const res = await (verb === 'patch' ? req.send({ name: '변경' }) : req);
+    expect(res.status).toBe(403);
+    const after = await get(id);
+    expect(after.status).toBe(200);
+    expect(after.body.name).toBe('티셔츠');
+  });
+
+  it('PATCH without X-Requested-With -> 403 CSRF_REQUIRED', async () => {
+    const id = ((await post(body())).body as ProductDetail).id;
+    const res = await request(server)
+      .patch(`${URL}/${id}`)
+      .set('Cookie', cookies.manager!)
+      .send({ name: '변경' });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('CSRF_REQUIRED');
+  });
+
   it('duplicate sku (" sku-0001 " vs existing SKU-0001) -> 409 CONFLICT details {field:"sku"}', async () => {
     expect((await post(body())).status).toBe(201);
     const res = await post(body({ sku: ' sku-0001 ' }));
