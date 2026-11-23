@@ -1,15 +1,3 @@
-import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
+import { PaginationQuery } from '../../common/pagination.js';
 
-export class ListUsersQuery {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page: number = 1;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  size: number = 20;
-}
+export class ListUsersQuery extends PaginationQuery {}

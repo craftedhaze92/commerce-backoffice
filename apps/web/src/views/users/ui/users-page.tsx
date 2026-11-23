@@ -3,20 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
-import { useMe } from '@/entities/session';
+import { useSessionMe } from '@/entities/session';
 import { useUsers } from '@/entities/user';
 import { ApiError } from '@/shared/api';
 import { kst } from '@/shared/lib/dayjs';
 import { ROLE_LABEL } from '@/shared/lib/role-label';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { DataPagination } from '@/shared/ui/data-pagination';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
 export function UsersPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const me = useMe();
+  const me = useSessionMe();
   const forbidden = me.data !== undefined && !can(me.data.role, 'user:manage');
   const users = useUsers(page, { enabled: me.data !== undefined && !forbidden });
   const apiForbidden = users.error instanceof ApiError && users.error.status === 403;
@@ -87,27 +88,7 @@ export function UsersPage() {
           )}
         </TableBody>
       </Table>
-      <div className="flex items-center justify-end gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          이전
-        </Button>
-        <span className="text-muted-foreground text-sm">
-          {page} / {Math.max(totalPages, 1)}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          다음
-        </Button>
-      </div>
+      <DataPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </section>
   );
 }

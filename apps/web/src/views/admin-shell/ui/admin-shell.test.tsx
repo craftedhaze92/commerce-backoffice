@@ -29,9 +29,10 @@ describe('AdminShell', () => {
     expect(screen.getByText('본문')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /사용자/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /대시보드/ })).toHaveAttribute('href', '/dashboard');
-    const products = screen.getByText('상품').closest('[aria-disabled="true"]');
-    expect(products).not.toBeNull();
-    expect(screen.getAllByText('준비 중')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /상품/ })).toHaveAttribute('href', '/products');
+    const orders = screen.getByText('주문').closest('[aria-disabled="true"]');
+    expect(orders).not.toBeNull();
+    expect(screen.getAllByText('준비 중')).toHaveLength(1);
     expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
   });
 });

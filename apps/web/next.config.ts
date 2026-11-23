@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: `${process.env.API_ORIGIN ?? 'http://localhost:4000'}/api/:path*`,
       },
+      {
+        source: '/media/:path*',
+        destination: `${process.env.MEDIA_ORIGIN ?? 'http://localhost:9090/bo-media'}/:path*`,
+      },
     ];
   },
 };
