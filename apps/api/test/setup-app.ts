@@ -17,9 +17,12 @@ export interface TestApp {
 
 /**
  * Boots the real AppModule (same wiring as main.ts) on its own database (cloned from the
- * migrated template) and its own S3 bucket. Containers are shared and started by global-setup.ts.
+ * migrated template) and its own S3 bucket. `options.env` overrides env vars for this app only
+ * (note: process.env is shared, so the override lasts until the next createTestApp call in this file). Containers are shared and started by global-setup.ts.
  */
-export async function createTestApp(): Promise<TestApp> {
+export async function createTestApp(
+  options: { env?: Partial<Record<string, string>> } = {},
+): Promise<TestApp> {
   const infra = inject('infra');
   const suffix = randomBytes(6).toString('hex');
   const dbName = `bo_test_${suffix}`;
@@ -51,6 +54,7 @@ export async function createTestApp(): Promise<TestApp> {
       DATABASE_URL: baseUrl(dbName),
       JWT_SECRET: 'test-secret-test-secret-test-secret-0123',
       WEB_ORIGIN: 'http://localhost:3000',
+      ...options.env,
     });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();

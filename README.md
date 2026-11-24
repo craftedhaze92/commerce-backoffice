@@ -25,6 +25,7 @@ pnpm install
 
 # 3. DB·스토리지 기동, 마이그레이션, 시드 (스토리지는 이미지 업로드에만 필요하다. 시드에는 필요 없다)
 pnpm db:up:storage && pnpm db:migrate && pnpm db:seed
+# 시드 주문(1,500건)은 재고와 재고 이력에 반영되지 않는다.
 
 # 4. 개발 서버 (web :3000, api :4000)
 pnpm dev

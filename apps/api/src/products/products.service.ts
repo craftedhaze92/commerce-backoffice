@@ -205,16 +205,17 @@ export class ProductsService {
       [id],
     )) as Array<{ total: number }>;
     const rows = (await this.dataSource.query(
-      `SELECT h.id, h.delta, h."quantityAfter", h.reason, h.note, h."refOrderId", u.name AS "actorName", h."createdAt"
-         FROM inventory_histories h LEFT JOIN users u ON u.id = h."actorId"
+      `SELECT h.id, h.delta, h."quantityAfter", h.reason, h.note, h."refOrderId", u.name AS "actorName", o."orderNo" AS "refOrderNo", h."createdAt"
+         FROM inventory_histories h
+         LEFT JOIN users u ON u.id = h."actorId"
+         LEFT JOIN orders o ON o.id = h."refOrderId"
         WHERE h."productId" = $1
         ORDER BY h."createdAt" DESC, h.id DESC
         LIMIT $2 OFFSET $3`,
       [id, q.size, (q.page - 1) * q.size],
-    )) as Array<Omit<InventoryHistoryItem, 'refOrderNo' | 'createdAt'> & { createdAt: Date }>;
+    )) as Array<Omit<InventoryHistoryItem, 'createdAt'> & { createdAt: Date }>;
     const items: InventoryHistoryItem[] = rows.map((r) => ({
       ...r,
-      refOrderNo: null,
       createdAt: r.createdAt.toISOString(),
     }));
     return toPaginated(items, total, q.page, q.size);

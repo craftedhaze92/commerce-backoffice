@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 
 /**
- * Append-only stock change log. The FKs to products/users (and, from M3 Task 4, orders) live in the
+ * Append-only stock change log. The FKs to products/users (and orders) live in the
  * migration, not as relations: inventory/ is a sub-module and must not import other domains' entities.
  */
 @Entity('inventory_histories')
@@ -34,6 +34,7 @@ export class InventoryHistory {
   @Column({ type: 'varchar', length: 200, nullable: true })
   note: string | null;
 
+  @ForeignKey('orders', { name: 'FK_inventory_histories_order', onDelete: 'SET NULL' })
   @Column({ type: 'uuid', nullable: true })
   refOrderId: string | null;
 
