@@ -277,7 +277,10 @@ describe('order status transitions (e2e)', () => {
       expect(cancel.body.status).toBe(OrderStatus.CANCELLED);
       const rows = await invHistory('"refOrderId" = $1', [id]);
       if (confirm.status === 200) {
-        expect(rows.map((r) => [r.reason, r.delta])).toEqual([
+        // createdAt은 트랜잭션 시작 시각이라 동시 요청에서는 락 순서와 어긋날 수 있다.
+        // 락 순서는 quantityAfter(7 -> 10)가 그대로 보여 준다
+        const byLockOrder = [...rows].sort((x, y) => x.quantityAfter - y.quantityAfter);
+        expect(byLockOrder.map((r) => [r.reason, r.delta])).toEqual([
           [InventoryChangeReason.ORDER_CONFIRM, -3],
           [InventoryChangeReason.ORDER_CANCEL, 3],
         ]);

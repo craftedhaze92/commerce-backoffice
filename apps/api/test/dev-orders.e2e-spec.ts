@@ -125,13 +125,19 @@ describe('dev random orders (e2e)', () => {
 
   it('orderNo format ORD-YYYYMMDD-NNNN using KST date', async () => {
     await addProducts(t, catId, 3);
+    const kstDay = () =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
+        .format(new Date())
+        .replaceAll('-', '');
+    // 요청이 KST 자정을 가로지를 수 있어 앞뒤 날짜를 모두 허용한다
+    const before = kstDay();
     const res = await post({ count: 2 });
+    const after = kstDay();
     const [a, b] = res.body.created as OrderListItem[];
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
-      .format(new Date())
-      .replaceAll('-', '');
-    expect(a!.orderNo).toBe(`ORD-${today}-0001`);
-    expect(b!.orderNo).toBe(`ORD-${today}-0002`);
+    const dates = new Set([before, after]);
+    const match = (no: string, seq: string) => [...dates].some((d) => no === `ORD-${d}-${seq}`);
+    expect(match(a!.orderNo, '0001')).toBe(true);
+    expect(match(b!.orderNo, '0002')).toBe(true);
   });
 
   it('20 concurrent random-order requests -> all orderNos unique', async () => {
