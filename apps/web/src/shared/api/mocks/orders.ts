@@ -353,6 +353,15 @@ export const orderHandlers = [
         statusCode: 422,
         code: 'INSUFFICIENT_STOCK',
         message: '재고는 0보다 작아질 수 없습니다',
+        details: [
+          {
+            productId: id,
+            sku: current.sku,
+            name: current.name,
+            requested: -delta,
+            available: current.stock,
+          } satisfies InsufficientStockItem,
+        ],
       };
       return HttpResponse.json(body, { status: 422 });
     }

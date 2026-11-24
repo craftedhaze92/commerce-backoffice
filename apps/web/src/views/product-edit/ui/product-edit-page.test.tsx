@@ -3,7 +3,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role, type ProductDetail, type ProductImage } from '@bo/contracts';
-import { renderWithQuery } from '@/shared/testing/render-with-query';
+import { sessionKeys } from '@/entities/session';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
 import { navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { categoryFixtures, productDetailFixture } from '@/shared/api/mocks/products';
@@ -351,5 +352,61 @@ describe('ProductEditPage', () => {
     expect(screen.queryByLabelText('상품명')).not.toBeInTheDocument();
     releaseMe();
     expect(await screen.findByLabelText('상품명')).toBeEnabled();
+  });
+  describe('inventory', () => {
+    const stock = productDetailFixture.stock;
+
+    it('manager sees stock card, 재고 조정 and history', async () => {
+      renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+      const card = await screen.findByRole('region', { name: '재고' });
+      expect(
+        within(card).getByText(
+          `현재 재고 ${stock}개 · 안전 재고 ${productDetailFixture.safetyStock}개`,
+        ),
+      ).toBeInTheDocument();
+      expect(within(card).getByRole('button', { name: '재고 조정' })).toBeInTheDocument();
+      expect((await within(card).findAllByRole('link', { name: /^ORD-/ })).length).toBeGreaterThan(
+        0,
+      );
+    });
+
+    it('viewer sees history but no 재고 조정 after the session has loaded', async () => {
+      useRole(Role.VIEWER);
+      const client = createTestQueryClient();
+      renderWithQuery(<ProductEditPage id={productDetailFixture.id} />, { client });
+      const card = await screen.findByRole('region', { name: '재고' });
+      await within(card).findAllByRole('link', { name: /^ORD-/ });
+      await waitFor(() =>
+        expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: 'VIEWER' }),
+      );
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      expect(screen.queryByRole('button', { name: '재고 조정' })).not.toBeInTheDocument();
+    });
+
+    it('입고 5 sends PATCH {delta, note} and updates the displayed stock', async () => {
+      const user = userEvent.setup();
+      let current = stock;
+      const patched = capture('patch', '/api/v1/products/:id/inventory', (body) => {
+        current += body?.delta as number;
+        return HttpResponse.json({ ...productDetailFixture, stock: current });
+      });
+      server.use(
+        http.get('/api/v1/products/:id', () =>
+          HttpResponse.json({ ...productDetailFixture, stock: current }),
+        ),
+      );
+      renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+      await user.click(await screen.findByRole('button', { name: '재고 조정' }));
+      await user.type(screen.getByLabelText('수량'), '5');
+      await user.type(screen.getByLabelText('사유'), '실사');
+      await user.click(screen.getByRole('button', { name: '조정' }));
+      await waitFor(() => expect(patched.calls).toBe(1));
+      expect(patched.body).toEqual({ delta: 5, note: '실사' });
+      expect(
+        await screen.findByText(
+          `현재 재고 ${stock + 5}개 · 안전 재고 ${productDetailFixture.safetyStock}개`,
+        ),
+      ).toBeInTheDocument();
+    });
   });
 });
