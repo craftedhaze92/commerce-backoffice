@@ -67,10 +67,15 @@ function cardsOf(s: DashboardSummary): KpiCardProps[] {
       value: `${s.pendingCount + s.toShipCount}건`,
       detail: (
         <span className="text-muted-foreground">
-          확정 대기 {s.pendingCount} · 출고 대기 {s.toShipCount}
+          <Link href="/orders?status=PENDING" className="hover:underline">
+            확정 대기 {s.pendingCount}
+          </Link>
+          {' · '}
+          <Link href="/orders?status=CONFIRMED" className="hover:underline">
+            출고 대기 {s.toShipCount}
+          </Link>
         </span>
       ),
-      href: '/orders?status=PENDING',
     },
     {
       title: '재고 부족',

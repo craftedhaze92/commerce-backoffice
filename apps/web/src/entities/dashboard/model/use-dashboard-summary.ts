@@ -9,6 +9,7 @@ export function useDashboardSummary(): UseQueryResult<DashboardSummary, ApiError
     queryKey: dashboardKeys.summary(),
     queryFn: () => http<DashboardSummary>('/dashboard/summary'),
     staleTime: 0,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }

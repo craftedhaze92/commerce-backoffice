@@ -9,6 +9,7 @@ export function useCategorySales(days: SalesTrendDays): UseQueryResult<CategoryS
     queryFn: () => http<CategorySales>(`/dashboard/category-sales?days=${days}`),
     placeholderData: keepPreviousData,
     staleTime: 0,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }

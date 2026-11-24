@@ -9,6 +9,7 @@ export function useSalesTrend(days: SalesTrendDays): UseQueryResult<SalesTrend, 
     queryFn: () => http<SalesTrend>(`/dashboard/sales-trend?days=${days}`),
     placeholderData: keepPreviousData,
     staleTime: 0,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }

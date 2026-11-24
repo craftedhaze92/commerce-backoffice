@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { focusManager } from '@tanstack/react-query';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http as mswHttp, HttpResponse } from 'msw';
 import { dashboardSummaryFixture } from '@/shared/api/mocks/dashboard';
@@ -10,13 +11,17 @@ import { KpiCards } from './kpi-cards';
 const card = (title: string) => screen.getByRole('group', { name: title });
 
 describe('KpiCards', () => {
+  afterEach(() => {
+    act(() => focusManager.setFocused(undefined));
+  });
+
   it('renders 오늘 매출 ₩…, 오늘 주문 N건, 처리 대기 total with breakdown, 재고 부족 N개', async () => {
     renderWithQuery(<KpiCards />);
     expect(await screen.findByText('₩1,500,000')).toBeInTheDocument();
     expect(within(card('오늘 매출')).getByText('₩1,500,000')).toBeInTheDocument();
     expect(within(card('오늘 주문')).getByText('12건')).toBeInTheDocument();
     expect(within(card('처리 대기')).getByText('8건')).toBeInTheDocument();
-    expect(within(card('처리 대기')).getByText('확정 대기 5 · 출고 대기 3')).toBeInTheDocument();
+    expect(card('처리 대기')).toHaveTextContent('확정 대기 5 · 출고 대기 3');
     expect(within(card('재고 부족')).getByText('4개')).toBeInTheDocument();
   });
 
@@ -44,17 +49,45 @@ describe('KpiCards', () => {
     expect(within(card('오늘 주문')).getByText('전일 실적 없음')).toBeInTheDocument();
   });
 
-  it('처리 대기 links to /orders?status=PENDING; 재고 부족 links to /products?lowStock=true', async () => {
+  it('재고 부족 card links to /products?lowStock=true', async () => {
     renderWithQuery(<KpiCards />);
     await screen.findByText('₩1,500,000');
-    expect(within(card('처리 대기')).getByRole('link')).toHaveAttribute(
-      'href',
-      '/orders?status=PENDING',
-    );
     expect(within(card('재고 부족')).getByRole('link')).toHaveAttribute(
       'href',
       '/products?lowStock=true',
     );
+  });
+
+  it('처리 대기 has no card-wide link; 확정 대기 → status=PENDING, 출고 대기 → status=CONFIRMED', async () => {
+    renderWithQuery(<KpiCards />);
+    await screen.findByText('₩1,500,000');
+    const pending = card('처리 대기');
+    expect(within(pending).getAllByRole('link')).toHaveLength(2);
+    expect(within(pending).getByRole('link', { name: '확정 대기 5' })).toHaveAttribute(
+      'href',
+      '/orders?status=PENDING',
+    );
+    expect(within(pending).getByRole('link', { name: '출고 대기 3' })).toHaveAttribute(
+      'href',
+      '/orders?status=CONFIRMED',
+    );
+    expect(pending).toHaveTextContent('확정 대기 5 · 출고 대기 3');
+  });
+
+  it('refetches the summary when the window regains focus', async () => {
+    let calls = 0;
+    server.use(
+      mswHttp.get('/api/v1/dashboard/summary', () => {
+        calls += 1;
+        return HttpResponse.json(dashboardSummaryFixture);
+      }),
+    );
+    renderWithQuery(<KpiCards />);
+    await screen.findByText('₩1,500,000');
+    expect(calls).toBe(1);
+    act(() => focusManager.setFocused(false));
+    act(() => focusManager.setFocused(true));
+    await waitFor(() => expect(calls).toBe(2));
   });
 
   it('skeleton while loading; 500 shows error and 다시 시도 refetches', async () => {
