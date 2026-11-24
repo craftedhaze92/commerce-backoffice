@@ -12,6 +12,7 @@ import {
 @Entity('orders')
 @Index('IDX_orders_status_created', ['status', 'createdAt'])
 @Index('IDX_orders_created', ['createdAt'])
+@Index('IDX_orders_confirmed', ['confirmedAt'])
 @Check('CHK_orders_total_nonneg', '"totalAmount" >= 0')
 export class Order {
   @PrimaryGeneratedColumn('uuid')

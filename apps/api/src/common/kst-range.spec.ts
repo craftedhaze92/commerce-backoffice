@@ -1,5 +1,5 @@
 import { AppException } from './app-exception.js';
-import { kstDayRange } from './kst-range.js';
+import { addKstDays, kstDateOf, kstDayRange } from './kst-range.js';
 
 describe('kstDayRange', () => {
   it('from=2026-11-20 -> gte 2026-11-19T15:00:00Z; to=2026-11-20 -> lt 2026-11-20T15:00:00Z', () => {
@@ -24,5 +24,17 @@ describe('kstDayRange', () => {
 
   it('from > to -> 400', () => {
     expect(() => kstDayRange('2026-11-21', '2026-11-20')).toThrow(AppException);
+  });
+});
+
+describe('kstDateOf / addKstDays', () => {
+  it('kstDateOf maps instants to the KST calendar day', () => {
+    expect(kstDateOf(new Date('2026-11-20T15:30:00Z'))).toBe('2026-11-21');
+    expect(kstDateOf(new Date('2026-11-20T14:59:59Z'))).toBe('2026-11-20');
+  });
+
+  it('addKstDays crosses month and year boundaries', () => {
+    expect(addKstDays('2026-03-01', -1)).toBe('2026-02-28');
+    expect(addKstDays('2026-12-31', 1)).toBe('2027-01-01');
   });
 });
