@@ -238,7 +238,7 @@ export const orderHandlers = [
   http.get('/api/v1/orders', ({ request }) => {
     const params = new URL(request.url).searchParams;
     const { page, size } = pageParams(params);
-    const q = (params.get('q') ?? '').toLowerCase();
+    const q = (params.get('q') ?? '').trim().toLowerCase();
     const status = params.get('status');
     const [field, dir] = (params.get('sort') ?? 'createdAt:desc').split(':');
     const sign = dir === 'asc' ? 1 : -1;
@@ -256,10 +256,11 @@ export const orderHandlers = [
           (fromMs === undefined || Date.parse(o.createdAt) >= fromMs) &&
           (toMs === undefined || Date.parse(o.createdAt) < toMs),
       )
-      .sort((a, b) =>
-        field === 'totalAmount'
-          ? sign * (a.totalAmount - b.totalAmount)
-          : sign * a.createdAt.localeCompare(b.createdAt),
+      .sort(
+        (a, b) =>
+          (field === 'totalAmount'
+            ? sign * (a.totalAmount - b.totalAmount)
+            : sign * a.createdAt.localeCompare(b.createdAt)) || sign * a.id.localeCompare(b.id),
       );
     return HttpResponse.json(paginate(filtered, page, size));
   }),

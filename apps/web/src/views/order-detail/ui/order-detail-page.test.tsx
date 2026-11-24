@@ -6,6 +6,8 @@ import { OrderStatus, Role, type OrderDetail } from '@bo/contracts';
 import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
 import { SHORT_STOCK_ORDER_ID, orderDetailFixture, orderFixtures } from '@/shared/api/mocks/orders';
+import { inventoryKeys } from '@/entities/inventory';
+import { orderKeys } from '@/entities/order';
 import { sessionKeys } from '@/entities/session';
 import { productFixtures } from '@/shared/api/mocks/products';
 import { OrderDetailPage } from './order-detail-page';
@@ -67,6 +69,16 @@ describe('OrderDetailPage', () => {
     expect(within(items[1]).getByText('관리자')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '출고 처리' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument();
+  });
+
+  it('confirm success marks inventory history queries invalid', async () => {
+    const client = createTestQueryClient();
+    const key = inventoryKeys.history('p1', 1, 10);
+    client.setQueryData(key, { items: [], meta: { page: 1, size: 10, total: 0, totalPages: 0 } });
+    renderWithQuery(<OrderDetailPage id={ID} />, { client });
+    await userEvent.setup().click(await screen.findByRole('button', { name: '확정' }));
+    await screen.findByRole('button', { name: '출고 처리' });
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
   });
 
   it('shows the timeline oldest first with KST time', async () => {
@@ -133,6 +145,24 @@ describe('OrderDetailPage', () => {
       '다른 사용자가 먼저 상태를 바꿨습니다',
     );
     await waitFor(() => expect(gets).toBe(2));
+  });
+
+  it('409 also invalidates the order list queries', async () => {
+    server.use(
+      http.post(`/api/v1/orders/${ID}/confirm`, () =>
+        HttpResponse.json(
+          { statusCode: 409, code: 'CONFLICT', message: 'x', details: {} },
+          { status: 409 },
+        ),
+      ),
+    );
+    const client = createTestQueryClient();
+    const listKey = orderKeys.list({} as Parameters<typeof orderKeys.list>[0]);
+    client.setQueryData(listKey, { items: [] });
+    renderWithQuery(<OrderDetailPage id={ID} />, { client });
+    await userEvent.setup().click(await screen.findByRole('button', { name: '확정' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await waitFor(() => expect(client.getQueryState(listKey)?.isInvalidated).toBe(true));
   });
 
   it('409 keeps the conflict message even when the refetched order is terminal', async () => {

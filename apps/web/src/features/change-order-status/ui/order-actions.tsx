@@ -83,7 +83,8 @@ export function OrderActions({ order }: { order: OrderDetail }) {
       onError: (error) => {
         // 오래된 화면이다. 최신 상태를 다시 불러온다
         if (error.status === 409) {
-          void queryClient.invalidateQueries({ queryKey: orderKeys.detail(order.id) });
+          // 상세도 orderKeys.all에 포함되므로 한 번만 무효화한다
+          void queryClient.invalidateQueries({ queryKey: orderKeys.all });
         }
       },
       onSettled: onDone,

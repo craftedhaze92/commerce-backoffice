@@ -3,7 +3,8 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { OrderStatus, Role, type OrderListItem } from '@bo/contracts';
-import { renderWithQuery } from '@/shared/testing/render-with-query';
+import { sessionKeys } from '@/entities/session';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { orderFixtures, seedOrderMock } from '@/shared/api/mocks/orders';
@@ -237,15 +238,27 @@ describe('OrderListPage', () => {
 
     it('viewer does not see it', async () => {
       useRole(Role.VIEWER);
-      renderWithQuery(<OrderListPage />);
+      const client = createTestQueryClient();
+      renderWithQuery(<OrderListPage />, { client });
       await screen.findByText('총 30건');
+      // 세션이 viewer로 확정된 뒤에만 부재를 단언한다
+      await waitFor(() =>
+        expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: Role.VIEWER }),
+      );
+      await waitFor(() => expect(client.isFetching()).toBe(0));
       expect(screen.queryByRole('button', { name: /가상 주문/ })).not.toBeInTheDocument();
     });
 
     it('is hidden in production', async () => {
       vi.stubEnv('NODE_ENV', 'production');
-      renderWithQuery(<OrderListPage />);
+      const client = createTestQueryClient();
+      renderWithQuery(<OrderListPage />, { client });
       await screen.findByText('총 30건');
+      // manager 세션이 도착한 뒤에도 production이라 숨겨져야 한다
+      await waitFor(() =>
+        expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: Role.MANAGER }),
+      );
+      await waitFor(() => expect(client.isFetching()).toBe(0));
       expect(screen.queryByRole('button', { name: /가상 주문/ })).not.toBeInTheDocument();
     });
   });
