@@ -127,6 +127,19 @@ export function resetOrderMocks(): void {
 }
 resetOrderMocks();
 
+/** 테스트가 임의의 주문(예: 날짜 경계)을 목 상태에 넣는다. resetOrderMocks()가 되돌린다. */
+export function seedOrderMock(item: OrderListItem): void {
+  orders.set(item.id, buildDetail(item));
+}
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** KST 달력 날짜(YYYY-MM-DD)의 00:00 KST를 UTC epoch ms로 돌려준다. API와 같은 경계 의미다. */
+function kstDayStart(date: string): number {
+  return Date.parse(`${date}T00:00:00Z`) - KST_OFFSET_MS;
+}
+
 function toListItem(d: OrderDetail): OrderListItem {
   return {
     id: d.id,
@@ -229,12 +242,19 @@ export const orderHandlers = [
     const status = params.get('status');
     const [field, dir] = (params.get('sort') ?? 'createdAt:desc').split(':');
     const sign = dir === 'asc' ? 1 : -1;
+    const from = params.get('from');
+    const to = params.get('to');
+    // from은 그날 00:00 KST부터, to는 그날 23:59:59.999 KST까지(= 다음 날 00:00 KST 미만)
+    const fromMs = from ? kstDayStart(from) : undefined;
+    const toMs = to ? kstDayStart(to) + DAY_MS : undefined;
     const filtered = [...orders.values()]
       .map(toListItem)
       .filter(
         (o) =>
           (!q || o.orderNo.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q)) &&
-          (!status || o.status === status),
+          (!status || o.status === status) &&
+          (fromMs === undefined || Date.parse(o.createdAt) >= fromMs) &&
+          (toMs === undefined || Date.parse(o.createdAt) < toMs),
       )
       .sort((a, b) =>
         field === 'totalAmount'

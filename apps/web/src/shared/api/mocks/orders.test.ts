@@ -10,7 +10,7 @@ import {
   type ProductDetail,
 } from '@bo/contracts';
 import { http } from '@/shared/api';
-import { orderDetailFixture, orderFixtures, SHORT_STOCK_ORDER_ID } from './orders';
+import { orderDetailFixture, orderFixtures, seedOrderMock, SHORT_STOCK_ORDER_ID } from './orders';
 import { productFixtures } from './products';
 
 const post = <T>(path: string, body?: unknown) => http<T>(path, { method: 'POST', json: body });
@@ -62,6 +62,22 @@ describe('orderHandlers', () => {
     });
     const list = await http<Paginated<OrderListItem>>('/orders?size=100');
     expect(list.items.find((o) => o.id === SHORT_STOCK_ORDER_ID)?.status).toBe(OrderStatus.PENDING);
+  });
+
+  it('filters by from/to with KST day boundaries', async () => {
+    const mk = (n: number, createdAt: string): OrderListItem => ({
+      ...orderFixtures[0],
+      id: `00000000-0000-4000-8000-b0000000000${n}`,
+      orderNo: `ORD-B-${n}`,
+      createdAt,
+    });
+    seedOrderMock(mk(1, '2026-11-20T14:59:00.000Z')); // 11-20 23:59 KST
+    seedOrderMock(mk(2, '2026-11-20T15:00:00.000Z')); // 11-21 00:00 KST
+    seedOrderMock(mk(3, '2026-11-19T15:00:00.000Z')); // 11-20 00:00 KST
+    const day = await http<Paginated<OrderListItem>>('/orders?from=2026-11-20&to=2026-11-20');
+    expect(day.items.map((o) => o.orderNo).sort()).toEqual(['ORD-B-1', 'ORD-B-3']);
+    const upTo = await http<Paginated<OrderListItem>>('/orders?to=2026-11-20&q=ORD-B');
+    expect(upTo.items.map((o) => o.orderNo)).not.toContain('ORD-B-2');
   });
 
   it('creates random orders in dev', async () => {
