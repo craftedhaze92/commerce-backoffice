@@ -41,7 +41,7 @@ export class InventoryLedger {
     const rows = (await m.query(
       `SELECT i."productId", i.quantity, p.sku, p.name
          FROM inventories i JOIN products p ON p.id = i."productId"
-        WHERE i."productId" = ANY($1)
+        WHERE i."productId" = ANY($1::uuid[])
         ORDER BY i."productId" FOR UPDATE OF i`,
       [ids],
     )) as LockedRow[];
@@ -75,12 +75,13 @@ export class InventoryLedger {
     for (const r of rows) {
       const delta = merged.get(r.productId)!;
       if (delta === 0) continue;
-      // The row lock is held, so quantity + delta is exactly what the UPDATE writes.
-      const quantityAfter = r.quantity + delta;
-      await m.query(
-        `UPDATE inventories SET quantity = $2, "updatedAt" = now() WHERE "productId" = $1`,
-        [r.productId, quantityAfter],
-      );
+      // TypeORM's postgres driver returns [rows, affectedCount] for UPDATE ... RETURNING.
+      const [[updated]] = (await m.query(
+        `UPDATE inventories SET quantity = quantity + $2, "updatedAt" = now()
+          WHERE "productId" = $1 RETURNING quantity`,
+        [r.productId, delta],
+      )) as [Array<{ quantity: number }>, number];
+      const quantityAfter = updated!.quantity;
       await m.query(
         `INSERT INTO inventory_histories ("productId", delta, "quantityAfter", reason, note, "refOrderId", "actorId")
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,

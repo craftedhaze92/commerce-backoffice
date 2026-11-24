@@ -11,9 +11,17 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCookieAuth } from '@nestjs/swagger';
-import { Role, type Paginated, type ProductDetail, type ProductListItem } from '@bo/contracts';
-import { Roles } from '../common/decorators.js';
+import {
+  Role,
+  type InventoryHistoryItem,
+  type Paginated,
+  type ProductDetail,
+  type ProductListItem,
+} from '@bo/contracts';
+import { CurrentUser, Roles, type AuthUser } from '../common/decorators.js';
+import { AdjustInventoryDto } from './dto/adjust-inventory.dto.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
+import { InventoryHistoryQuery } from './dto/inventory-history.query.js';
 import { ListProductsQuery } from './dto/list-products.query.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ProductsService } from './products.service.js';
@@ -48,6 +56,25 @@ export class ProductsController {
     @Body() dto: UpdateProductDto,
   ): Promise<ProductDetail> {
     return this.products.update(id, dto);
+  }
+
+  @Roles(Role.MANAGER)
+  @Patch(':id/inventory')
+  adjustInventory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AdjustInventoryDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ProductDetail> {
+    return this.products.adjustInventory(id, dto, user.id);
+  }
+
+  @Roles(Role.VIEWER)
+  @Get(':id/inventory-history')
+  inventoryHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() q: InventoryHistoryQuery,
+  ): Promise<Paginated<InventoryHistoryItem>> {
+    return this.products.inventoryHistory(id, q);
   }
 
   @Roles(Role.MANAGER)
