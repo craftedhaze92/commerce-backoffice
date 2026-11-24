@@ -80,6 +80,21 @@ describe('inventory adjust and history (e2e)', () => {
   const historyCount = () =>
     t.dataSource.query('SELECT count(*)::int AS c FROM inventory_histories');
 
+  it('delta pushing stock past int4 max -> 400 and stock/history unchanged', async () => {
+    await t.dataSource.query(
+      'UPDATE inventories SET quantity = 2147000000 WHERE "productId" = $1',
+      [productId],
+    );
+    const res = await adjust({ delta: 1_000_000, note: '상한 초과' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_FAILED');
+    expect(res.body.details).toEqual([
+      { field: 'delta', messages: ['재고 상한을 넘을 수 없습니다'] },
+    ]);
+    expect(await stock()).toBe(2147000000);
+    expect((await historyCount())[0].c).toBe(0);
+  });
+
   it('manager +5 -> 200, stock increases, history row MANUAL_ADJUST with note and actor', async () => {
     const res = await adjust({ delta: 5, note: '입고' });
     expect(res.status).toBe(200);

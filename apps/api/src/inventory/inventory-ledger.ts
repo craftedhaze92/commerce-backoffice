@@ -3,6 +3,9 @@ import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AppException } from '../common/app-exception.js';
 
+/** PostgreSQL int4 상한. 넘으면 UPDATE가 500으로 터지므로 먼저 막는다. */
+const MAX_QUANTITY = 2_147_483_647;
+
 export interface StockChange {
   productId: string;
   delta: number;
@@ -59,6 +62,12 @@ export class InventoryLedger {
     const shortages: InsufficientStockItem[] = [];
     for (const r of rows) {
       const delta = merged.get(r.productId)!;
+      if (r.quantity + delta > MAX_QUANTITY) {
+        // 트랜잭션 안에서 던지므로 호출자가 롤백한다
+        throw new AppException(400, 'VALIDATION_FAILED', '재고 상한을 넘을 수 없습니다', [
+          { field: 'delta', messages: ['재고 상한을 넘을 수 없습니다'] },
+        ]);
+      }
       if (r.quantity + delta < 0) {
         shortages.push({
           productId: r.productId,
