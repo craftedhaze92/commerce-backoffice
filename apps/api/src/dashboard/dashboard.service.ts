@@ -87,7 +87,7 @@ export class DashboardService {
       `SELECT to_char(d.day, 'YYYY-MM-DD') AS "date",
               COALESCE(o.revenue, 0)::bigint AS "revenue",
               COALESCE(o.orders, 0)::int AS "orders"
-       FROM generate_series($1::date, $2::date, '1 day') AS d(day)
+       FROM generate_series($1::date::timestamp, $2::date::timestamp, '1 day') AS d(day)
        LEFT JOIN (
          SELECT ("confirmedAt" AT TIME ZONE 'Asia/Seoul')::date AS day,
                 SUM("totalAmount")::bigint AS revenue,

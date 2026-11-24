@@ -1,6 +1,7 @@
 import request from 'supertest';
 import {
   OrderStatus,
+  ProductStatus,
   Role,
   type CategorySales,
   type DashboardSummary,
@@ -113,7 +114,13 @@ describe('dashboard summary (e2e)', () => {
     return p.id;
   }
 
-  async function makeProduct(sku: string, quantity: number, safetyStock: number, deleted = false) {
+  async function makeProduct(
+    sku: string,
+    quantity: number,
+    safetyStock: number,
+    deleted = false,
+    status?: ProductStatus,
+  ) {
     await t.dataSource.transaction(async (m) => {
       const p = await m.save(
         m.create(Product, {
@@ -121,6 +128,7 @@ describe('dashboard summary (e2e)', () => {
           name: sku,
           categoryId,
           price: 1000,
+          ...(status ? { status } : {}),
           ...(deleted ? { deletedAt: new Date() } : {}),
         }),
       );
@@ -199,16 +207,17 @@ describe('dashboard summary (e2e)', () => {
     expect(s.toShipCount).toBe(1);
   });
 
-  it('lowStockCount equals GET /products?lowStock=true meta.total; soft-deleted excluded', async () => {
+  it('lowStockCount equals GET /products?lowStock=true meta.total; counts non-ON_SALE, excludes soft-deleted', async () => {
     await makeProduct('LOW-1', 2, 5);
     await makeProduct('LOW-2', 5, 5);
     await makeProduct('OK-1', 6, 5);
     await makeProduct('GONE-1', 0, 5, true);
+    await makeProduct('HIDDEN-LOW', 1, 5, false, ProductStatus.HIDDEN);
     const s = await summary();
     const list = await request(t.app.getHttpServer())
       .get('/api/v1/products?lowStock=true')
       .set('Cookie', cookie);
-    expect(s.lowStockCount).toBe(2);
+    expect(s.lowStockCount).toBe(3); // LOW-1, LOW-2, and the HIDDEN one (status is irrelevant)
     expect(s.lowStockCount).toBe((list.body as Paginated<unknown>).meta.total);
   });
 
