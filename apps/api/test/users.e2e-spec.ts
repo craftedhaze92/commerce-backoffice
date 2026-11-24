@@ -20,7 +20,7 @@ describe('users (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await repo.clear();
+    await t.dataSource.query('TRUNCATE users CASCADE');
   });
 
   const make = (email: string, name = 'n', createdAt?: Date) =>

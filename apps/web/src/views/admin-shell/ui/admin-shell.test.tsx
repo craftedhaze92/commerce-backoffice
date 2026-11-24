@@ -30,9 +30,8 @@ describe('AdminShell', () => {
     expect(screen.queryByRole('link', { name: /사용자/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /대시보드/ })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByRole('link', { name: /상품/ })).toHaveAttribute('href', '/products');
-    const orders = screen.getByText('주문').closest('[aria-disabled="true"]');
-    expect(orders).not.toBeNull();
-    expect(screen.getAllByText('준비 중')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /주문/ })).toHaveAttribute('href', '/orders');
+    expect(screen.queryByText('준비 중')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
   });
 });

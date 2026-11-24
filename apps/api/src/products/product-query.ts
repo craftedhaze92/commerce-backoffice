@@ -1,13 +1,9 @@
 import { PRODUCT_SORT_FIELDS, type ProductSortField } from '@bo/contracts';
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { AppException } from '../common/app-exception.js';
+import { escapeLike } from '../common/like.js';
 import { parseSort } from '../common/sort.js';
 import type { ListProductsQuery } from './dto/list-products.query.js';
-
-/** Escapes LIKE/ILIKE wildcards so user input matches literally (use with ESCAPE '\'). */
-export function escapeLike(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-}
 
 const SORT_COLUMNS: Record<ProductSortField, string> = {
   createdAt: 'p.createdAt',

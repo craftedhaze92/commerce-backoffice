@@ -1,10 +1,11 @@
-import { ProductStatus, Role } from '@bo/contracts';
-import { DataSource, In } from 'typeorm';
+import { OrderStatus, ProductStatus, Role } from '@bo/contracts';
+import { DataSource, In, type EntityManager } from 'typeorm';
 import { hashPassword } from '../auth/password.js';
 import { validateEnv } from '../config/env.js';
 import { Category } from '../categories/category.entity.js';
 import { Inventory } from '../products/inventory.entity.js';
 import { ProductImage } from '../products/product-image.entity.js';
+import { nextOrderNo } from '../orders/order-number.js';
 import { Product } from '../products/product.entity.js';
 import { User } from '../users/user.entity.js';
 import { buildDataSourceOptions } from './data-source.js';
@@ -16,6 +17,30 @@ const DEMO_USERS = [
 ];
 
 const SEED_PRNG = 20261120;
+const ORDER_SEED_PRNG = 20261124;
+const ORDER_COUNT = 1500;
+const ORDER_WINDOW_DAYS = 90;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+const MINUTE_MS = 60_000;
+const CUSTOMERS = [
+  '김민준',
+  '이서연',
+  '박지호',
+  '최수아',
+  '정도윤',
+  '강하은',
+  '조현우',
+  '윤지아',
+  '장서준',
+  '임유나',
+  '한지우',
+  '오시우',
+  '서예린',
+  '신건우',
+  '권다은',
+  '황태민',
+];
 const PRODUCT_COUNT = 200;
 const SAFETY_STOCK = 10;
 /** Share of products seeded at or below safetyStock. */
@@ -161,6 +186,152 @@ async function seedCatalog(dataSource: DataSource): Promise<number> {
   return seeds.length;
 }
 
+interface SeedOrder {
+  createdAt: Date;
+  customerName: string;
+  status: OrderStatus;
+  /** Status path with the instant of each step (strictly increasing). */
+  path: Array<{ from: OrderStatus | null; to: OrderStatus; at: Date }>;
+  lines: Array<{ productId: string; sku: string; name: string; price: number; quantity: number }>;
+  totalAmount: number;
+}
+
+function pickOrderStatus(r: number): OrderStatus {
+  if (r < 0.55) return OrderStatus.DELIVERED;
+  if (r < 0.65) return OrderStatus.SHIPPED;
+  if (r < 0.75) return OrderStatus.CONFIRMED;
+  if (r < 0.9) return OrderStatus.PENDING;
+  return OrderStatus.CANCELLED;
+}
+
+type SeedProduct4Order = { id: string; sku: string; name: string; price: number };
+
+function buildSeedOrders(products: SeedProduct4Order[], now: Date): SeedOrder[] {
+  const rand = mulberry32(ORDER_SEED_PRNG);
+  const int = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
+  const orders: SeedOrder[] = [];
+  for (let n = 0; n < ORDER_COUNT; n++) {
+    const status = pickOrderStatus(rand());
+    // Steps after creation, as [to, delay since previous step]. Delays are >= 1 minute so history is strictly ordered.
+    const steps: Array<[OrderStatus, number]> = [];
+    const confirmDelay = int(1, 6) * HOUR_MS + int(0, 59) * MINUTE_MS + MINUTE_MS;
+    if (status === OrderStatus.CANCELLED) {
+      if (rand() < 0.3) steps.push([OrderStatus.CONFIRMED, confirmDelay]);
+      steps.push([OrderStatus.CANCELLED, int(1, 24) * HOUR_MS + MINUTE_MS]);
+    } else if (status !== OrderStatus.PENDING) {
+      steps.push([OrderStatus.CONFIRMED, confirmDelay]);
+      if (status !== OrderStatus.CONFIRMED) {
+        steps.push([OrderStatus.SHIPPED, int(1, 24) * HOUR_MS + MINUTE_MS]);
+        if (status === OrderStatus.DELIVERED) {
+          steps.push([OrderStatus.DELIVERED, int(24, 72) * HOUR_MS + MINUTE_MS]);
+        }
+      }
+    }
+    const span = steps.reduce((sum, [, d]) => sum + d, 0);
+    // Random instant in the last 90 days, early enough that the whole path is already in the past.
+    const created = Math.min(
+      now.getTime() - rand() * ORDER_WINDOW_DAYS * DAY_MS,
+      now.getTime() - span - MINUTE_MS,
+    );
+    const createdAt = new Date(Math.floor(created));
+    const path: SeedOrder['path'] = [{ from: null, to: OrderStatus.PENDING, at: createdAt }];
+    let at = createdAt.getTime();
+    let from = OrderStatus.PENDING;
+    for (const [to, delay] of steps) {
+      at += delay;
+      path.push({ from, to, at: new Date(at) });
+      from = to;
+    }
+
+    const picked = new Set<number>();
+    const itemCount = int(1, 4);
+    while (picked.size < itemCount) picked.add(Math.floor(rand() * products.length));
+    const lines = [...picked].map((idx) => {
+      const p = products[idx]!;
+      return { productId: p.id, sku: p.sku, name: p.name, price: p.price, quantity: int(1, 3) };
+    });
+    orders.push({
+      createdAt,
+      customerName: CUSTOMERS[int(0, CUSTOMERS.length - 1)]!,
+      status,
+      path,
+      lines,
+      totalAmount: lines.reduce((sum, l) => sum + l.price * l.quantity, 0),
+    });
+  }
+  // Issue order numbers oldest-first so the per-day sequence follows creation time.
+  return orders.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+}
+
+/**
+ * Demo orders for the last 90 days. Only runs while the orders table is empty (idempotent).
+ * Seeded orders deliberately do not touch stock or inventory history.
+ */
+async function seedOrders(dataSource: DataSource, now = new Date()): Promise<number> {
+  const [{ c }] = (await dataSource.query('SELECT count(*)::int AS c FROM orders')) as Array<{
+    c: number;
+  }>;
+  if (c > 0) return 0;
+  const [manager] = (await dataSource.query('SELECT id FROM users WHERE email = $1', [
+    'manager@demo.com',
+  ])) as Array<{ id: string }>;
+  const products = (await dataSource.query(
+    'SELECT id, sku, name, price FROM products WHERE "deletedAt" IS NULL ORDER BY sku',
+  )) as SeedProduct4Order[];
+  if (!manager || products.length === 0) return 0;
+  const orders = buildSeedOrders(products, now);
+
+  await dataSource.transaction(async (m: EntityManager) => {
+    const orderNos: string[] = [];
+    for (const o of orders) orderNos.push(await nextOrderNo(m, o.createdAt));
+    const ids = (await m.query(
+      `INSERT INTO orders ("orderNo", "customerName", status, "totalAmount", "createdAt", "confirmedAt", "cancelledAt", "updatedAt")
+       SELECT * FROM unnest($1::text[], $2::text[], $3::orders_status_enum[], $4::int[], $5::timestamptz[], $6::timestamptz[], $7::timestamptz[], $8::timestamptz[])
+       RETURNING id, "orderNo"`,
+      [
+        orderNos,
+        orders.map((o) => o.customerName),
+        orders.map((o) => o.status),
+        orders.map((o) => o.totalAmount),
+        orders.map((o) => o.createdAt),
+        orders.map((o) => o.path.find((s) => s.to === OrderStatus.CONFIRMED)?.at ?? null),
+        orders.map((o) => o.path.find((s) => s.to === OrderStatus.CANCELLED)?.at ?? null),
+        orders.map((o) => o.path[o.path.length - 1]!.at),
+      ],
+    )) as Array<{ id: string; orderNo: string }>;
+    const idByNo = new Map(ids.map((r) => [r.orderNo, r.id]));
+    const orderIds = orderNos.map((no) => idByNo.get(no) as string);
+
+    const items = orders.flatMap((o, i) => o.lines.map((l) => ({ orderId: orderIds[i]!, ...l })));
+    await m.query(
+      `INSERT INTO order_items ("orderId", "productId", sku, "productName", quantity, "unitPrice")
+       SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::int[], $6::int[])`,
+      [
+        items.map((i) => i.orderId),
+        items.map((i) => i.productId),
+        items.map((i) => i.sku),
+        items.map((i) => i.name),
+        items.map((i) => i.quantity),
+        items.map((i) => i.price),
+      ],
+    );
+
+    const history = orders.flatMap((o, i) => o.path.map((s) => ({ orderId: orderIds[i]!, ...s })));
+    await m.query(
+      `INSERT INTO order_status_histories ("orderId", "fromStatus", "toStatus", "actorId", "createdAt")
+       SELECT * FROM unnest($1::uuid[], $2::order_status_histories_fromstatus_enum[], $3::order_status_histories_tostatus_enum[], $4::uuid[], $5::timestamptz[])`,
+      [
+        history.map((h) => h.orderId),
+        history.map((h) => h.from),
+        history.map((h) => h.to),
+        history.map(() => manager.id),
+        history.map((h) => h.at),
+      ],
+    );
+  });
+  return orders.length;
+}
+
 async function main(): Promise<void> {
   const env = validateEnv(process.env);
   const password = process.env.SEED_PASSWORD;
@@ -181,6 +352,8 @@ async function main(): Promise<void> {
     console.log(`Seeded ${DEMO_USERS.length} demo users`);
     const productCount = await seedCatalog(dataSource);
     console.log(`Seeded ${CATEGORY_NAMES.length} categories, ${productCount} products`);
+    const orderCount = await seedOrders(dataSource);
+    console.log(orderCount > 0 ? `Seeded ${orderCount} orders` : 'Orders already present, skipped');
   } finally {
     await dataSource.destroy();
   }

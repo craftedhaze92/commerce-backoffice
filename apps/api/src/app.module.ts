@@ -11,6 +11,8 @@ import { ENV, EnvModule } from './config/env.module.js';
 import type { Env } from './config/env.js';
 import { buildDataSourceOptions } from './database/data-source.js';
 import { HealthController } from './health/health.controller.js';
+import { InventoryModule } from './inventory/inventory.module.js';
+import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -22,7 +24,9 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     AuthModule,
     CategoriesModule,
+    InventoryModule,
     ProductsModule,
+    OrdersModule,
     LoggerModule.forRootAsync({
       inject: [ENV],
       useFactory: (env: Env) => ({

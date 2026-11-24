@@ -66,6 +66,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build && pnpm 
 
 **구조:** 도메인별 Nest 모듈(`users/`, `auth/`, …)에 `*.entity.ts`, `*.service.ts`, `*.controller.ts`, `dto/`를 둔다.
 여러 모듈이 쓰는 것은 `common/`에 둔다(데코레이터, 가드, 예외, 이메일 정규화, `API_PREFIX`).
+`inventory/`는 하위 모듈이다. `orders/`·`products/`가 의존할 수 있고, 테이블은 SQL로 다루며 도메인 파일을 import하지 않는다.
 도메인 모듈끼리 파일을 직접 import하지 않는다. 예를 들어 `users/`는 `auth/`를 모른다. ESM이므로 상대 import에는 `.js` 확장자를 붙인다.
 
 **HTTP 규약:**

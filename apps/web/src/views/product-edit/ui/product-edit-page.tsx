@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
 import { useProduct } from '@/entities/product';
 import { useSessionMe } from '@/entities/session';
+import { AdjustInventoryDialog } from '@/features/adjust-inventory';
 import { DeleteProductButton } from '@/features/delete-product';
 import { ProductForm } from '@/features/edit-product';
+import { InventoryHistory } from '@/widgets/inventory-history';
 import { ApiError } from '@/shared/api';
+import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 
@@ -61,6 +64,9 @@ function EditProduct({ id }: { id: string }) {
   const me = useSessionMe();
   const product = useProduct(id);
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
+  const canAdjust = me.data !== undefined && can(me.data.role, 'inventory:adjust');
+  // 조정에 성공하면 이력을 첫 페이지부터 다시 보여 주려고 위젯을 새로 마운트한다
+  const [historyKey, setHistoryKey] = useState(0);
 
   // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
   if (product.isPending || me.isPending) {
@@ -106,6 +112,27 @@ function EditProduct({ id }: { id: string }) {
         )}
       </header>
       <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
+      <section aria-labelledby="inventory-heading" className="flex max-w-3xl flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <h2 id="inventory-heading" className="text-base font-bold">
+              재고
+            </h2>
+            <span className="text-sm">
+              현재 재고 {detail.stock}개 · 안전 재고 {detail.safetyStock}개
+            </span>
+            {detail.isLowStock && <Badge variant="destructive">부족</Badge>}
+          </div>
+          {canAdjust && (
+            <AdjustInventoryDialog
+              productId={detail.id}
+              currentStock={detail.stock}
+              onAdjusted={() => setHistoryKey((k) => k + 1)}
+            />
+          )}
+        </div>
+        <InventoryHistory key={historyKey} productId={detail.id} />
+      </section>
     </section>
   );
 }

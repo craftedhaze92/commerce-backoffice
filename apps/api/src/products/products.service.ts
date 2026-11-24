@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
+  InventoryChangeReason,
   PRODUCT_LIMITS,
+  type InventoryHistoryItem,
   type Paginated,
   type ProductDetail,
   type ProductImageRef,
@@ -18,7 +20,10 @@ import {
 import { AppException } from '../common/app-exception.js';
 import { toPaginated } from '../common/pagination.js';
 import { Category } from '../categories/category.entity.js';
+import { InventoryLedger } from '../inventory/inventory-ledger.js';
+import type { AdjustInventoryDto } from './dto/adjust-inventory.dto.js';
 import type { CreateProductDto } from './dto/create-product.dto.js';
+import type { InventoryHistoryQuery } from './dto/inventory-history.query.js';
 import type { ListProductsQuery } from './dto/list-products.query.js';
 import type { UpdateProductDto } from './dto/update-product.dto.js';
 import { Inventory } from './inventory.entity.js';
@@ -33,6 +38,7 @@ export class ProductsService {
     @InjectRepository(Product) private readonly products: Repository<Product>,
     @InjectRepository(ProductImage) private readonly images: Repository<ProductImage>,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly ledger: InventoryLedger,
   ) {}
 
   private baseQuery(): SelectQueryBuilder<Product> {
@@ -123,9 +129,12 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductDetail> {
     await this.inTx(async (m) => {
+      // FOR NO KEY UPDATE, not FOR UPDATE: inserts referencing this product (inventory_histories,
+      // order_items) take FOR KEY SHARE on it, and an order confirm does that while holding the
+      // inventory row this PATCH updates next. FOR UPDATE would deadlock against it.
       const product = await m.findOne(Product, {
         where: { id },
-        lock: { mode: 'pessimistic_write' },
+        lock: { mode: 'for_no_key_update' },
       });
       if (!product) throw new AppException(404, 'NOT_FOUND', 'Product not found');
       if (dto.categoryId != null) await this.assertCategory(m, dto.categoryId);
@@ -160,6 +169,59 @@ export class ProductsService {
       await m.save(product);
     });
     return this.get(id);
+  }
+
+  async adjustInventory(
+    id: string,
+    dto: AdjustInventoryDto,
+    actorId: string,
+  ): Promise<ProductDetail> {
+    await this.inTx(async (m) => {
+      // FOR SHARE keeps a concurrent soft delete from slipping in; stock rows are serialized by the ledger.
+      const live = await m
+        .createQueryBuilder(Product, 'p')
+        .setLock('pessimistic_read')
+        .where('p.id = :id', { id })
+        .andWhere('p.deletedAt IS NULL')
+        .getOne();
+      if (!live) throw new AppException(404, 'NOT_FOUND', 'Product not found');
+      const res = await this.ledger.apply(m, [{ productId: id, delta: dto.delta }], {
+        reason: InventoryChangeReason.MANUAL_ADJUST,
+        actorId,
+        note: dto.note,
+      });
+      if (!res.ok) {
+        throw new AppException(422, 'INSUFFICIENT_STOCK', '재고가 부족합니다', res.shortages);
+      }
+    });
+    return this.get(id);
+  }
+
+  async inventoryHistory(
+    id: string,
+    q: InventoryHistoryQuery,
+  ): Promise<Paginated<InventoryHistoryItem>> {
+    const exists = await this.products.existsBy({ id });
+    if (!exists) throw new AppException(404, 'NOT_FOUND', 'Product not found');
+    const [{ total }] = (await this.dataSource.query(
+      'SELECT count(*)::int AS total FROM inventory_histories WHERE "productId" = $1',
+      [id],
+    )) as Array<{ total: number }>;
+    const rows = (await this.dataSource.query(
+      `SELECT h.id, h.delta, h."quantityAfter", h.reason, h.note, h."refOrderId", u.name AS "actorName", o."orderNo" AS "refOrderNo", h."createdAt"
+         FROM inventory_histories h
+         LEFT JOIN users u ON u.id = h."actorId"
+         LEFT JOIN orders o ON o.id = h."refOrderId"
+        WHERE h."productId" = $1
+        ORDER BY h."createdAt" DESC, h.id DESC
+        LIMIT $2 OFFSET $3`,
+      [id, q.size, (q.page - 1) * q.size],
+    )) as Array<Omit<InventoryHistoryItem, 'createdAt'> & { createdAt: Date }>;
+    const items: InventoryHistoryItem[] = rows.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+    return toPaginated(items, total, q.page, q.size);
   }
 
   async remove(id: string): Promise<void> {

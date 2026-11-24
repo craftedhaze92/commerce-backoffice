@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { resetOrderMocks } from './src/shared/api/mocks/orders';
 import { server } from './src/shared/testing/msw-server';
 
 /**
@@ -37,5 +38,8 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
  */
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 // 한 테스트에서 server.use()로 갈아끼운 핸들러가 다음 테스트로 새지 않게 되돌린다.
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  resetOrderMocks();
+});
 afterAll(() => server.close());

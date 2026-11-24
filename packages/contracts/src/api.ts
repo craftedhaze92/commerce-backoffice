@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'CSRF_REQUIRED'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'INSUFFICIENT_STOCK'
   | 'INTERNAL';
 
 export interface ApiErrorBody {
