@@ -31,7 +31,8 @@ export function OrderDetailPage({ id }: { id: string }) {
     );
   }
 
-  if (order.isError) {
+  // 백그라운드 재조회가 실패해도 이미 받은 데이터가 있으면 화면을 유지한다
+  if (order.data === undefined) {
     const notFound = order.error instanceof ApiError && order.error.status === 404;
     return (
       <section role="alert" className="flex flex-col items-start gap-3 py-8">

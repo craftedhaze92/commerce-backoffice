@@ -3,9 +3,11 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { OrderStatus, Role, type OrderDetail } from '@bo/contracts';
-import { renderWithQuery } from '@/shared/testing/render-with-query';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
 import { SHORT_STOCK_ORDER_ID, orderDetailFixture, orderFixtures } from '@/shared/api/mocks/orders';
+import { sessionKeys } from '@/entities/session';
+import { productFixtures } from '@/shared/api/mocks/products';
 import { OrderDetailPage } from './order-detail-page';
 
 vi.mock('next/navigation', async () => {
@@ -23,17 +25,29 @@ const ID = orderDetailFixture.id;
 describe('OrderDetailPage', () => {
   beforeEach(() => useRole(Role.MANAGER));
 
-  it('PENDING shows 확정·주문 취소 for manager; viewer sees none', async () => {
-    const { unmount } = renderWithQuery(<OrderDetailPage id={ID} />);
+  it('manager sees the action buttons once the session is loaded (positive control)', async () => {
+    const client = createTestQueryClient();
+    renderWithQuery(<OrderDetailPage id={ID} />, { client });
+    await screen.findByText('합계');
+    await waitFor(() =>
+      expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: 'MANAGER' }),
+    );
     expect(await screen.findByRole('button', { name: '확정' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '주문 취소' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '출고 처리' })).not.toBeInTheDocument();
-    unmount();
+  });
 
+  it('viewer sees no action buttons after the session has loaded', async () => {
     useRole(Role.VIEWER);
-    renderWithQuery(<OrderDetailPage id={ID} />);
-    expect(await screen.findByRole('heading', { name: orderDetailFixture.orderNo })).toBeVisible();
+    const client = createTestQueryClient();
+    renderWithQuery(<OrderDetailPage id={ID} />, { client });
+    await screen.findByRole('heading', { name: orderDetailFixture.orderNo });
     await screen.findByText('합계');
+    // 세션이 도착해 viewer로 확정된 뒤에만 부재를 단언한다
+    await waitFor(() =>
+      expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: 'VIEWER' }),
+    );
+    await waitFor(() => expect(client.isFetching()).toBe(0));
     expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '주문 취소' })).not.toBeInTheDocument();
   });
@@ -91,8 +105,10 @@ describe('OrderDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: '확정' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('재고가 부족해 확정할 수 없습니다');
-    expect(within(alert).getByRole('listitem')).toHaveTextContent('(');
-    expect(within(alert).getByRole('listitem')).toHaveTextContent('필요 5개 / 재고 2개');
+    const p1 = productFixtures[0];
+    expect(within(alert).getByRole('listitem')).toHaveTextContent(
+      `${p1.name}(${p1.sku}): 필요 5개 / 재고 2개`,
+    );
     expect(screen.getByRole('button', { name: '확정' })).toBeEnabled();
   });
 
@@ -117,6 +133,31 @@ describe('OrderDetailPage', () => {
       '다른 사용자가 먼저 상태를 바꿨습니다',
     );
     await waitFor(() => expect(gets).toBe(2));
+  });
+
+  it('409 keeps the conflict message even when the refetched order is terminal', async () => {
+    const cancelled: OrderDetail = { ...orderDetailFixture, status: OrderStatus.CANCELLED };
+    let gets = 0;
+    server.use(
+      http.get(`/api/v1/orders/${ID}`, () => {
+        gets += 1;
+        return HttpResponse.json(gets === 1 ? orderDetailFixture : cancelled);
+      }),
+      http.post(`/api/v1/orders/${ID}/confirm`, () =>
+        HttpResponse.json(
+          { statusCode: 409, code: 'CONFLICT', message: 'x', details: {} },
+          { status: 409 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithQuery(<OrderDetailPage id={ID} />);
+    await user.click(await screen.findByRole('button', { name: '확정' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '확정' })).not.toBeInTheDocument(),
+    );
+    expect(gets).toBe(2);
+    expect(screen.getByRole('alert')).toHaveTextContent('다른 사용자가 먼저 상태를 바꿨습니다');
   });
 
   it('other errors show a generic message', async () => {

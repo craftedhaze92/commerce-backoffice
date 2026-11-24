@@ -32,13 +32,21 @@ const ACTION_LABEL: Record<OrderAction, string> = {
   cancel: '주문 취소',
 };
 
-function isStockItems(details: unknown): details is InsufficientStockItem[] {
-  return Array.isArray(details);
+function isStockItem(v: unknown): v is InsufficientStockItem {
+  if (typeof v !== 'object' || v === null) return false;
+  const i = v as Record<string, unknown>;
+  return (
+    typeof i.productId === 'string' &&
+    typeof i.name === 'string' &&
+    typeof i.sku === 'string' &&
+    typeof i.requested === 'number' &&
+    typeof i.available === 'number'
+  );
 }
 
 function ErrorMessage({ error }: { error: ApiError }) {
   if (error.status === 422 && error.code === 'INSUFFICIENT_STOCK') {
-    const items = isStockItems(error.details) ? error.details : [];
+    const items = Array.isArray(error.details) ? error.details.filter(isStockItem) : [];
     return (
       <div role="alert" className="text-destructive text-sm">
         <p>재고가 부족해 확정할 수 없습니다</p>
@@ -67,7 +75,8 @@ export function OrderActions({ order }: { order: OrderDetail }) {
 
   if (me.data === undefined || !can(me.data.role, 'order:write')) return null;
   const actions = availableActions(order.status);
-  if (actions.length === 0) return null;
+  // 상태가 바뀐 뒤에도 방금 실패한 전이의 안내(409 등)는 남겨 둔다
+  if (actions.length === 0 && !transition.isError) return null;
 
   const run = (action: OrderAction, onDone?: () => void) => {
     transition.mutate(action, {
