@@ -408,5 +408,24 @@ describe('ProductEditPage', () => {
         ),
       ).toBeInTheDocument();
     });
+
+    it('returns the history to page 1 after a successful adjustment', async () => {
+      const user = userEvent.setup();
+      server.use(
+        http.patch('/api/v1/products/:id/inventory', () =>
+          HttpResponse.json({ ...productDetailFixture, stock: stock + 1 }),
+        ),
+      );
+      renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+      const card = await screen.findByRole('region', { name: '재고' });
+      await within(card).findAllByRole('link', { name: /^ORD-/ });
+      await user.click(within(card).getByRole('button', { name: '다음' }));
+      expect(await within(card).findByText('2 / 2')).toBeInTheDocument();
+      await user.click(within(card).getByRole('button', { name: '재고 조정' }));
+      await user.type(screen.getByLabelText('수량'), '1');
+      await user.type(screen.getByLabelText('사유'), '실사');
+      await user.click(screen.getByRole('button', { name: '조정' }));
+      expect(await within(card).findByText('1 / 2')).toBeInTheDocument();
+    });
   });
 });

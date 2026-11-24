@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
@@ -65,6 +65,8 @@ function EditProduct({ id }: { id: string }) {
   const product = useProduct(id);
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
   const canAdjust = me.data !== undefined && can(me.data.role, 'inventory:adjust');
+  // 조정에 성공하면 이력을 첫 페이지부터 다시 보여 주려고 위젯을 새로 마운트한다
+  const [historyKey, setHistoryKey] = useState(0);
 
   // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
   if (product.isPending || me.isPending) {
@@ -121,9 +123,15 @@ function EditProduct({ id }: { id: string }) {
             </span>
             {detail.isLowStock && <Badge variant="destructive">부족</Badge>}
           </div>
-          {canAdjust && <AdjustInventoryDialog productId={detail.id} currentStock={detail.stock} />}
+          {canAdjust && (
+            <AdjustInventoryDialog
+              productId={detail.id}
+              currentStock={detail.stock}
+              onAdjusted={() => setHistoryKey((k) => k + 1)}
+            />
+          )}
         </div>
-        <InventoryHistory productId={detail.id} />
+        <InventoryHistory key={historyKey} productId={detail.id} />
       </section>
     </section>
   );

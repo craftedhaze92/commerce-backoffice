@@ -30,6 +30,8 @@ const GENERIC_ERROR = '재고를 조정하지 못했습니다';
 interface AdjustInventoryDialogProps {
   productId: string;
   currentStock: number;
+  /** 조정이 성공했을 때 호출한다(예: 재고 이력을 첫 페이지로 되돌린다). */
+  onAdjusted?: () => void;
 }
 
 function availableFrom(details: unknown): number | undefined {
@@ -48,7 +50,11 @@ function serverMessage(error: ApiError): string {
   return GENERIC_ERROR;
 }
 
-export function AdjustInventoryDialog({ productId, currentStock }: AdjustInventoryDialogProps) {
+export function AdjustInventoryDialog({
+  productId,
+  currentStock,
+  onAdjusted,
+}: AdjustInventoryDialogProps) {
   const [open, setOpen] = useState(false);
   const adjust = useAdjustInventory(productId);
   const {
@@ -64,9 +70,17 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
 
   const [mode, amountText] = useWatch({ control, name: ['mode', 'amount'] });
   const amount = Number(amountText);
-  const valid = amountText.trim() !== '' && Number.isInteger(amount) && amount >= 1;
-  const preview = valid ? currentStock + (mode === 'in' ? amount : -amount) : currentStock;
+  const valid =
+    amountText.trim() !== '' &&
+    Number.isInteger(amount) &&
+    amount >= 1 &&
+    amount <= INVENTORY_LIMITS.deltaMax;
+  const preview = currentStock + (mode === 'in' ? amount : -amount);
   const tooMuch = mode === 'out' && valid && amount > currentStock;
+
+  function clearServerError() {
+    if (adjust.isError) adjust.reset();
+  }
 
   function onOpenChange(next: boolean) {
     if (adjust.isPending) return;
@@ -94,6 +108,7 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
               onSuccess: () => {
                 reset(DEFAULTS);
                 setOpen(false);
+                onAdjusted?.();
               },
             }),
           )}
@@ -106,7 +121,11 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
                 type="single"
                 variant="outline"
                 value={field.value}
-                onValueChange={(v) => v && field.onChange(v)}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  clearServerError();
+                  field.onChange(v);
+                }}
                 aria-label="조정 방향"
               >
                 <ToggleGroupItem value="in">입고</ToggleGroupItem>
@@ -123,7 +142,7 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
               max={INVENTORY_LIMITS.deltaMax}
               className={FORM_FIELD}
               aria-invalid={errors.amount ? true : undefined}
-              {...register('amount')}
+              {...register('amount', { onChange: clearServerError })}
             />
             {errors.amount && (
               <span role="alert" className="text-destructive text-xs">
@@ -137,7 +156,7 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
               placeholder="예: 실사 결과 반영"
               className={FORM_FIELD}
               aria-invalid={errors.note ? true : undefined}
-              {...register('note')}
+              {...register('note', { onChange: clearServerError })}
             />
             {errors.note && (
               <span role="alert" className="text-destructive text-xs">
@@ -145,7 +164,7 @@ export function AdjustInventoryDialog({ productId, currentStock }: AdjustInvento
               </span>
             )}
           </label>
-          <p className="text-sm font-medium">조정 후 재고 {preview}개</p>
+          {valid && <p className="text-sm font-medium">조정 후 재고 {preview}개</p>}
           {tooMuch && (
             <p role="alert" className="text-destructive text-xs">
               현재 재고({currentStock}개)보다 많이 뺄 수 없습니다

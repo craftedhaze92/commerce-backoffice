@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { INVENTORY_LIMITS } from '@bo/contracts';
 import { productDetailFixture } from '@/shared/api/mocks/products';
 import { renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
@@ -102,5 +103,45 @@ describe('AdjustInventoryDialog', () => {
     await user.type(screen.getByLabelText('사유'), '입고');
     await user.click(screen.getByRole('button', { name: '조정' }));
     expect(await screen.findByText('재고를 조정하지 못했습니다')).toBeInTheDocument();
+  });
+
+  it('shows no preview for 0, decimals, negatives or above the limit', async () => {
+    const user = userEvent.setup();
+    await openDialog(user);
+    const amount = screen.getByLabelText('수량');
+    for (const bad of ['0', '1.5', '-3', String(INVENTORY_LIMITS.deltaMax + 1)]) {
+      await user.clear(amount);
+      await user.type(amount, bad);
+      expect(screen.queryByText(/조정 후 재고/)).not.toBeInTheDocument();
+    }
+    await user.clear(amount);
+    await user.type(amount, String(INVENTORY_LIMITS.deltaMax));
+    expect(screen.getByText(`조정 후 재고 ${STOCK + INVENTORY_LIMITS.deltaMax}개`)).toBeVisible();
+  });
+
+  it('clears the server error when any field changes', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.patch('/api/v1/products/:id/inventory', () =>
+        HttpResponse.json({ statusCode: 500, code: 'INTERNAL', message: 'x' }, { status: 500 }),
+      ),
+    );
+    await openDialog(user);
+    await user.type(screen.getByLabelText('수량'), '1');
+    await user.type(screen.getByLabelText('사유'), '입고');
+    await user.click(screen.getByRole('button', { name: '조정' }));
+    expect(await screen.findByText('재고를 조정하지 못했습니다')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('사유'), '!');
+    expect(screen.queryByText('재고를 조정하지 못했습니다')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '조정' }));
+    expect(await screen.findByText('재고를 조정하지 못했습니다')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: '출고' }));
+    expect(screen.queryByText('재고를 조정하지 못했습니다')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '조정' }));
+    expect(await screen.findByText('재고를 조정하지 못했습니다')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('수량'), '2');
+    expect(screen.queryByText('재고를 조정하지 못했습니다')).not.toBeInTheDocument();
   });
 });
