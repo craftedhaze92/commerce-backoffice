@@ -129,9 +129,12 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductDetail> {
     await this.inTx(async (m) => {
+      // FOR NO KEY UPDATE, not FOR UPDATE: inserts referencing this product (inventory_histories,
+      // order_items) take FOR KEY SHARE on it, and an order confirm does that while holding the
+      // inventory row this PATCH updates next. FOR UPDATE would deadlock against it.
       const product = await m.findOne(Product, {
         where: { id },
-        lock: { mode: 'pessimistic_write' },
+        lock: { mode: 'for_no_key_update' },
       });
       if (!product) throw new AppException(404, 'NOT_FOUND', 'Product not found');
       if (dto.categoryId != null) await this.assertCategory(m, dto.categoryId);
