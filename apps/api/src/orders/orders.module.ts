@@ -7,10 +7,12 @@ import { OrderItem } from './order-item.entity.js';
 import { OrderSequence } from './order-sequence.entity.js';
 import { OrderStatusHistory } from './order-status-history.entity.js';
 import { Order } from './order.entity.js';
+import { OrdersController } from './orders.controller.js';
+import { OrdersService } from './orders.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Order, OrderItem, OrderStatusHistory, OrderSequence])],
-  controllers: [DevOrdersController],
-  providers: [DevOrdersService, DevOnlyGuard],
+  controllers: [OrdersController, DevOrdersController],
+  providers: [OrdersService, DevOrdersService, DevOnlyGuard],
 })
 export class OrdersModule {}

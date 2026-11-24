@@ -120,6 +120,7 @@ describe('dev random orders (e2e)', () => {
     expect(((await post({})).body.created as unknown[]).length).toBe(5);
     expect((await post({ count: 0 })).status).toBe(400);
     expect((await post({ count: 51 })).status).toBe(400);
+    expect((await post({ count: null })).status).toBe(400);
   });
 
   it('orderNo format ORD-YYYYMMDD-NNNN using KST date', async () => {
@@ -175,7 +176,6 @@ describe('dev random orders in production (e2e)', () => {
   let t: TestApp;
   afterAll(async () => {
     await t?.stop();
-    process.env.NODE_ENV = 'test';
   });
 
   it('-> 404', async () => {
