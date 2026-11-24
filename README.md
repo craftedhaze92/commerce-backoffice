@@ -84,12 +84,12 @@ pnpm dev
 
 - KPI 카드 4개: 오늘 매출·오늘 주문·처리 대기·재고 부족. 오늘 매출과 오늘 주문은 전일 대비 증감률을 보이고, 전일 실적이 0이면 "전일 실적 없음"으로 표시한다.
   - 오늘 매출: `CONFIRMED`·`SHIPPED`·`DELIVERED` 주문의 합계를 확정 시각(`confirmedAt`) 기준 KST 날짜로 센다. `PENDING`과 확정 후 취소된 주문은 빠진다.
-  - 오늘 주문: 오늘 접수(`createdAt`)된 주문 수. 상태는 가리지 않는다(취소 포함).
-  - 처리 대기: 확정 대기(`PENDING`)와 출고 대기(`CONFIRMED`) 건수. 기간과 무관한 현재 상태다.
+  - 오늘 주문: 오늘(KST) 접수(`createdAt`)된 주문 수. 상태는 가리지 않는다(취소 포함).
+  - 처리 대기: 확정 대기(`PENDING`)와 출고 대기(`CONFIRMED`)의 합계가 큰 숫자이고, 그 아래에 "확정 대기 N · 출고 대기 N" 내역을 보인다. 기간과 무관한 현재 상태다.
   - 재고 부족: 안전 재고 이하이고 삭제되지 않은 상품 수. 상품 목록의 `lowStock=true`와 같은 조건이라 카드를 누르면 같은 숫자의 목록으로 간다.
 - 매출 추이 라인차트와 카테고리별 매출 도넛. 기간 토글(7일·30일·90일)은 `?days=`로 URL에 남는다. 매출 없는 날도 0으로 채운다. 매출이 있는 카테고리가 6개를 넘으면 상위 6개와 "기타"로 묶는다.
 - 최근 주문 5건과 재고 부족 상품 5건.
-- API: `GET /api/v1/dashboard/summary`, `/dashboard/sales-trend?days=`, `/dashboard/category-sales?days=` (모두 VIEWER 이상).
+- API: `GET /api/v1/dashboard/summary`, `/dashboard/sales-trend?days=`, `/dashboard/category-sales?days=` (`days`는 7·30·90, 기본 30. 모두 VIEWER 이상).
 
 ## 설계 문서
 
