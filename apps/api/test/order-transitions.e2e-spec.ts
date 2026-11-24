@@ -250,6 +250,81 @@ describe('order status transitions (e2e)', () => {
     expect(detail.history).toHaveLength(1);
   });
 
+  it('same order confirmed twice concurrently → one 200 one 409, stock deducted once', async () => {
+    const a = await product('SKU-A', 10);
+    for (let i = 0; i < 5; i++) {
+      const id = await order([[a, 1]]);
+      const [r1, r2] = await Promise.all([act(id, 'confirm'), act(id, 'confirm')]);
+      expect([r1.status, r2.status].sort((p, q) => p - q)).toEqual([200, 409]);
+      const loser = r1.status === 409 ? r1 : r2;
+      expect(loser.body.details).toEqual({
+        from: OrderStatus.CONFIRMED,
+        to: OrderStatus.CONFIRMED,
+      });
+      const rows = await invHistory('"refOrderId" = $1', [id]);
+      expect(rows.map((r) => r.reason)).toEqual([InventoryChangeReason.ORDER_CONFIRM]);
+    }
+    expect(await stock(a)).toBe(5);
+  });
+
+  it('confirm vs cancel on the same PENDING order concurrently → stock matches the winner', async () => {
+    const a = await product('SKU-A', 10);
+    for (let i = 0; i < 5; i++) {
+      const id = await order([[a, 3]]);
+      const [confirm, cancel] = await Promise.all([act(id, 'confirm'), act(id, 'cancel')]);
+      // Cancel always succeeds: from PENDING, or from CONFIRMED if confirm won the lock.
+      expect(cancel.status).toBe(200);
+      expect(cancel.body.status).toBe(OrderStatus.CANCELLED);
+      const rows = await invHistory('"refOrderId" = $1', [id]);
+      if (confirm.status === 200) {
+        expect(rows.map((r) => [r.reason, r.delta])).toEqual([
+          [InventoryChangeReason.ORDER_CONFIRM, -3],
+          [InventoryChangeReason.ORDER_CANCEL, 3],
+        ]);
+        expect(cancel.body.confirmedAt).not.toBeNull();
+      } else {
+        expect(confirm.status).toBe(409);
+        expect(confirm.body.details).toEqual({
+          from: OrderStatus.CANCELLED,
+          to: OrderStatus.CONFIRMED,
+        });
+        expect(rows).toHaveLength(0);
+        expect(cancel.body.confirmedAt).toBeNull();
+      }
+      expect(await stock(a)).toBe(10);
+    }
+  });
+
+  it('product PATCH does not block on FOR KEY SHARE held by another tx (lock is FOR NO KEY UPDATE)', async () => {
+    const a = await product('SKU-A', 10);
+    const qr = t.dataSource.createQueryRunner();
+    await qr.connect();
+    let patch: Promise<number | Error> | undefined;
+    try {
+      await qr.startTransaction();
+      // What a confirm in progress holds: inserting inventory_histories takes FOR KEY SHARE via the FK.
+      await qr.query('SELECT 1 FROM products WHERE id = $1 FOR KEY SHARE', [a]);
+      patch = request(server)
+        .patch(`/api/v1/products/${a}`)
+        .set('Cookie', cookies.manager!)
+        .set('X-Requested-With', 'fetch')
+        .send({ name: '새 이름' })
+        .then(
+          (r) => r.status,
+          (e: Error) => e,
+        );
+      const outcome = await Promise.race([
+        patch,
+        new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 2000)),
+      ]);
+      expect(outcome).toBe(200);
+    } finally {
+      await qr.rollbackTransaction();
+      await qr.release();
+      await patch;
+    }
+  });
+
   it('confirm twice → second 409 CONFLICT details {from: CONFIRMED, to: CONFIRMED}; stock deducted once', async () => {
     const a = await product('SKU-A', 10);
     const id = await order([[a, 4]]);
