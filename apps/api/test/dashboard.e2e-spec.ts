@@ -1,5 +1,12 @@
 import request from 'supertest';
-import { OrderStatus, Role, type DashboardSummary, type Paginated } from '@bo/contracts';
+import {
+  OrderStatus,
+  Role,
+  type CategorySales,
+  type DashboardSummary,
+  type Paginated,
+  type SalesTrend,
+} from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
 import { hashPassword } from '../src/auth/password.js';
 import { CLOCK } from '../src/common/clock.js';
@@ -55,12 +62,12 @@ describe('dashboard summary (e2e)', () => {
     total?: number;
     createdAt?: string;
     confirmedAt?: string | null;
-  }): Promise<void> {
+  }): Promise<string> {
     seq += 1;
     const created = o.createdAt ?? '2026-11-01T00:00:00Z';
-    await t.dataSource.query(
+    const rows = (await t.dataSource.query(
       `INSERT INTO orders ("orderNo","customerName",status,"totalAmount","createdAt","updatedAt","confirmedAt")
-       VALUES ($1,'홍길동',$2,$3,$4,$4,$5)`,
+       VALUES ($1,'홍길동',$2,$3,$4,$4,$5) RETURNING id`,
       [
         `ORD-D${seq}`,
         o.status ?? OrderStatus.CONFIRMED,
@@ -68,7 +75,42 @@ describe('dashboard summary (e2e)', () => {
         created,
         o.confirmedAt ?? null,
       ],
+    )) as Array<{ id: string }>;
+    return rows[0]!.id;
+  }
+
+  /** One order with one line item; total = quantity × unitPrice. */
+  async function insertSale(o: {
+    confirmedAt: string;
+    status?: OrderStatus;
+    productId: string;
+    quantity?: number;
+    unitPrice: number;
+  }): Promise<void> {
+    const quantity = o.quantity ?? 1;
+    const orderId = await insertOrder({
+      status: o.status ?? OrderStatus.CONFIRMED,
+      total: quantity * o.unitPrice,
+      confirmedAt: o.confirmedAt,
+    });
+    await t.dataSource.query(
+      `INSERT INTO order_items ("orderId","productId",sku,"productName",quantity,"unitPrice")
+       SELECT $1, id, sku, name, $3, $4 FROM products WHERE id = $2`,
+      [orderId, o.productId, quantity, o.unitPrice],
     );
+  }
+
+  async function newProduct(sku: string, catId = categoryId, deleted = false): Promise<string> {
+    const p = await t.dataSource.getRepository(Product).save(
+      t.dataSource.getRepository(Product).create({
+        sku,
+        name: sku,
+        categoryId: catId,
+        price: 1000,
+        ...(deleted ? { deletedAt: new Date() } : {}),
+      }),
+    );
+    return p.id;
   }
 
   async function makeProduct(sku: string, quantity: number, safetyStock: number, deleted = false) {
@@ -173,5 +215,183 @@ describe('dashboard summary (e2e)', () => {
   it('viewer 200; no cookie 401', async () => {
     expect((await get(cookie)).status).toBe(200);
     expect((await get()).status).toBe(401);
+  });
+
+  describe('sales-trend / category-sales', () => {
+    const TREND = '/api/v1/dashboard/sales-trend';
+    const CATS = '/api/v1/dashboard/category-sales';
+    const trend = async (q = '') =>
+      (
+        await request(t.app.getHttpServer())
+          .get(TREND + q)
+          .set('Cookie', cookie)
+      ).body as SalesTrend;
+    const cats = async (q = '') =>
+      (
+        await request(t.app.getHttpServer())
+          .get(CATS + q)
+          .set('Cookie', cookie)
+      ).body as CategorySales;
+
+    it('default days=30: 30 points from 2026-10-23 to 2026-11-21, ascending, zero-filled', async () => {
+      const res = await request(t.app.getHttpServer()).get(TREND).set('Cookie', cookie);
+      expect(res.status).toBe(200);
+      const body = res.body as SalesTrend;
+      expect(body.days).toBe(30);
+      expect(body.from).toBe('2026-10-23');
+      expect(body.to).toBe('2026-11-21');
+      expect(body.total).toBe(0);
+      expect(body.points).toHaveLength(30);
+      expect(body.points[0]).toEqual({ date: '2026-10-23', revenue: 0, orders: 0 });
+      expect(body.points[29]!.date).toBe('2026-11-21');
+      const dates = body.points.map((p) => p.date);
+      expect([...dates].sort()).toEqual(dates);
+      expect(new Set(dates).size).toBe(30);
+    });
+
+    it('days=7 bucket by KST: confirmed 11-20 23:59 KST lands on 11-20, 11-21 00:00 KST on 11-21', async () => {
+      const pid = await newProduct('A');
+      await insertSale({ productId: pid, unitPrice: 700, confirmedAt: '2026-11-20T14:59:00Z' });
+      await insertSale({ productId: pid, unitPrice: 300, confirmedAt: '2026-11-20T15:00:00Z' });
+      const body = await trend('?days=7');
+      expect(body.points).toHaveLength(7);
+      expect(body.from).toBe('2026-11-15');
+      expect(body.points.find((p) => p.date === '2026-11-20')).toEqual({
+        date: '2026-11-20',
+        revenue: 700,
+        orders: 1,
+      });
+      expect(body.points.find((p) => p.date === '2026-11-21')).toEqual({
+        date: '2026-11-21',
+        revenue: 300,
+        orders: 1,
+      });
+    });
+
+    it('order confirmed before the window is excluded; first day of window is included', async () => {
+      const pid = await newProduct('A');
+      // days=7 → from 2026-11-15 00:00 KST = 2026-11-14T15:00:00Z
+      await insertSale({ productId: pid, unitPrice: 100, confirmedAt: '2026-11-14T14:59:00Z' });
+      await insertSale({ productId: pid, unitPrice: 200, confirmedAt: '2026-11-14T15:00:00Z' });
+      const body = await trend('?days=7');
+      expect(body.total).toBe(200);
+      expect(body.points[0]).toEqual({ date: '2026-11-15', revenue: 200, orders: 1 });
+      expect((await cats('?days=7')).total).toBe(200);
+    });
+
+    it('cancelled-after-confirm and PENDING excluded from trend and category', async () => {
+      const pid = await newProduct('A');
+      const at = '2026-11-20T15:10:00Z';
+      await insertSale({
+        productId: pid,
+        unitPrice: 111,
+        confirmedAt: at,
+        status: OrderStatus.PENDING,
+      });
+      await insertSale({
+        productId: pid,
+        unitPrice: 222,
+        confirmedAt: at,
+        status: OrderStatus.CANCELLED,
+      });
+      await insertSale({
+        productId: pid,
+        unitPrice: 400,
+        confirmedAt: at,
+        status: OrderStatus.SHIPPED,
+      });
+      expect((await trend()).total).toBe(400);
+      const c = await cats();
+      expect(c.total).toBe(400);
+      expect(c.items).toHaveLength(1);
+    });
+
+    it('trend.total === Σ points.revenue === categorySales.total for the same days', async () => {
+      const a = await newProduct('A');
+      await insertSale({
+        productId: a,
+        unitPrice: 1000,
+        quantity: 3,
+        confirmedAt: '2026-11-20T15:10:00Z',
+      });
+      await insertSale({
+        productId: a,
+        unitPrice: 500,
+        quantity: 2,
+        confirmedAt: '2026-11-10T03:00:00Z',
+      });
+      for (const days of [7, 30, 90]) {
+        const tr = await trend(`?days=${days}`);
+        const ca = await cats(`?days=${days}`);
+        expect(tr.total).toBe(tr.points.reduce((s, p) => s + p.revenue, 0));
+        expect(tr.total).toBe(ca.total);
+        expect(ca.total).toBe(ca.items.reduce((s, i) => s + i.revenue, 0));
+      }
+    });
+
+    it('category revenue sums beyond int4 as number (2 × 1_500_000_000)', async () => {
+      const pid = await newProduct('A');
+      const at = '2026-11-20T15:10:00Z';
+      await insertSale({ productId: pid, unitPrice: 1_500_000_000, confirmedAt: at });
+      await insertSale({ productId: pid, unitPrice: 1_500_000_000, confirmedAt: at });
+      const c = await cats();
+      expect(c.total).toBe(3_000_000_000);
+      expect(c.items[0]!.revenue).toBe(3_000_000_000);
+      expect(typeof c.items[0]!.revenue).toBe('number');
+      expect(c.items[0]!.quantity).toBe(2);
+      const tr = await trend();
+      expect(tr.total).toBe(3_000_000_000);
+      expect(tr.points[29]).toEqual({ date: '2026-11-21', revenue: 3_000_000_000, orders: 2 });
+    });
+
+    it('line amount multiplies in bigint (quantity × unitPrice beyond int4)', async () => {
+      const pid = await newProduct('A');
+      const orderId = await insertOrder({ total: 1000, confirmedAt: '2026-11-20T15:10:00Z' });
+      await t.dataSource.query(
+        `INSERT INTO order_items ("orderId","productId",sku,"productName",quantity,"unitPrice") VALUES ($1,$2,'A','A',3,1000000000)`,
+        [orderId, pid],
+      );
+      expect((await cats()).total).toBe(3_000_000_000);
+    });
+
+    it('soft-deleted product revenue still counted under its category', async () => {
+      const pid = await newProduct('GONE', categoryId, true);
+      await insertSale({ productId: pid, unitPrice: 900, confirmedAt: '2026-11-20T15:10:00Z' });
+      const c = await cats();
+      expect(c.items).toEqual([{ categoryId, categoryName: '의류', revenue: 900, quantity: 1 }]);
+    });
+
+    it('categories sorted revenue desc; zero-revenue category omitted', async () => {
+      const shoes = (await t.dataSource.getRepository(Category).save({ name: '신발' })).id;
+      const bags = (await t.dataSource.getRepository(Category).save({ name: '가방' })).id;
+      await t.dataSource.getRepository(Category).save({ name: '빈카테고리' });
+      const at = '2026-11-20T15:10:00Z';
+      await insertSale({ productId: await newProduct('A'), unitPrice: 100, confirmedAt: at });
+      await insertSale({
+        productId: await newProduct('B', shoes),
+        unitPrice: 500,
+        confirmedAt: at,
+      });
+      await insertSale({ productId: await newProduct('C', bags), unitPrice: 100, confirmedAt: at });
+      const c = await cats();
+      expect(c.items.map((i) => i.categoryName)).toEqual(['신발', '가방', '의류']);
+    });
+
+    it.each(['days=0', 'days=14', 'days=abc'])('400 for %s on both endpoints', async (q) => {
+      for (const url of [TREND, CATS]) {
+        const res = await request(t.app.getHttpServer()).get(`${url}?${q}`).set('Cookie', cookie);
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('VALIDATION_FAILED');
+      }
+    });
+
+    it('viewer 200; no cookie 401 on both endpoints', async () => {
+      for (const url of [TREND, CATS]) {
+        expect((await request(t.app.getHttpServer()).get(url).set('Cookie', cookie)).status).toBe(
+          200,
+        );
+        expect((await request(t.app.getHttpServer()).get(url)).status).toBe(401);
+      }
+    });
   });
 });

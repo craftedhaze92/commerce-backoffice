@@ -42,10 +42,10 @@ export interface SalesTrend {
 }
 
 export interface CategorySalesItem {
-  /** "기타"로 합친 항목은 null */
-  categoryId: string | null;
-  name: string;
+  categoryId: string;
+  categoryName: string;
   revenue: number;
+  quantity: number;
 }
 
 export interface CategorySales {
