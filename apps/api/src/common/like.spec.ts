@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeLike } from './product-query.js';
+import { escapeLike } from './like.js';
 
 describe('escapeLike', () => {
   it('leaves plain text untouched', () => {
