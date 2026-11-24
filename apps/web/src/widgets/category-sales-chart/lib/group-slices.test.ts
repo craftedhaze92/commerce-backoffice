@@ -13,11 +13,22 @@ const NAMES = ['가', '나', '다', '라', '마', '바', '사', '아'];
 const eight = (): CategorySalesItem[] => NAMES.map((n, i) => item(n, (8 - i) * 100));
 
 describe('groupCategorySlices', () => {
-  it('≤7 items: unchanged order, ratios sum to 100', () => {
+  it('≤6 items: unchanged order, ratios sum to 100, distinct colors', () => {
+    for (const n of [1, 6]) {
+      const slices = groupCategorySlices(eight().slice(0, n));
+      expect(slices.map((s) => s.label)).toEqual(NAMES.slice(0, n));
+      expect(slices.reduce((sum, s) => sum + s.ratio, 0)).toBeCloseTo(100, 10);
+      expect(new Set(slices.map((s) => s.color)).size).toBe(n);
+      expect(slices.some((s) => s.key === 'etc')).toBe(false);
+    }
+  });
+
+  it('exactly 7 items: top 6 + 기타, all colors distinct', () => {
     const slices = groupCategorySlices(eight().slice(0, 7));
-    expect(slices.map((s) => s.label)).toEqual(NAMES.slice(0, 7));
-    expect(slices.reduce((sum, s) => sum + s.ratio, 0)).toBeCloseTo(100, 10);
-    expect(slices.some((s) => s.key === 'etc')).toBe(false);
+    expect(slices.map((s) => s.label)).toEqual([...NAMES.slice(0, 6), '기타']);
+    expect(slices[6]).toMatchObject({ key: 'etc', revenue: 200 });
+    expect(new Set(slices.map((s) => s.color)).size).toBe(7);
+    expect(slices[6].color).toBe('#4a3aa7');
   });
 
   it('8 items: top 6 + 기타 with summed revenue; 기타 last', () => {
@@ -27,6 +38,7 @@ describe('groupCategorySlices', () => {
     const etc = slices[6];
     expect(etc).toMatchObject({ key: 'etc', label: '기타', revenue: 200 + 100 });
     expect(slices.reduce((sum, s) => sum + s.ratio, 0)).toBeCloseTo(100, 10);
+    expect(new Set(slices.map((s) => s.color)).size).toBe(7);
   });
 
   it('colors follow label order, 기타 always sector-7; swapping revenue ranks keeps colors', () => {
