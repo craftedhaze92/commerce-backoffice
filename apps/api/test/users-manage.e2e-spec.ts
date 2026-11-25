@@ -288,7 +288,7 @@ describe('users manage (e2e)', () => {
     const demo = await createTestApp({ env: { DEMO_MODE: 'true' } });
     try {
       const s = demo.app.getHttpServer();
-      await seedUser(demo, 'admin@demo.com', Role.ADMIN);
+      const demoAdmin = await seedUser(demo, 'admin@demo.com', Role.ADMIN);
       const plainAdmin = await seedUser(demo, 'plain-admin@x.com', Role.ADMIN);
       const viewer = await seedUser(demo, 'viewer@demo.com', Role.VIEWER);
       const other = await seedUser(demo, 'other@x.com', Role.VIEWER);
@@ -311,7 +311,15 @@ describe('users manage (e2e)', () => {
       expect(changed.status).toBe(200);
       expect(changed.body).toMatchObject({ role: Role.MANAGER, isActive: false });
 
-      // Self role change by a non-demo admin is still SELF_CHANGE under DEMO_MODE.
+      // Self role/isActive change is SELF_CHANGE under DEMO_MODE, for demo and non-demo admins.
+      for (const body of [{ role: Role.VIEWER }, { isActive: false }]) {
+        const demoSelf = await patch(s, at, demoAdmin.id, body);
+        expect(demoSelf.status).toBe(409);
+        expect(demoSelf.body).toMatchObject({
+          code: 'CONFLICT',
+          details: { reason: 'SELF_CHANGE' },
+        });
+      }
       const plainAt = (await loginCookies(s, 'plain-admin@x.com')).at;
       const self = await patch(s, plainAt, plainAdmin.id, { role: Role.VIEWER });
       expect(self.status).toBe(409);

@@ -79,7 +79,7 @@ export class UsersService {
   }
 
   /**
-   * Checks run in this order: 404 → DEMO_PROTECTED → SELF_CHANGE → LAST_ADMIN (under a lock on
+   * Checks run in this order: 404 → SELF_CHANGE → DEMO_PROTECTED → LAST_ADMIN (under a lock on
    * every active ADMIN row) → update → revoke refresh tokens on deactivation. Every rejection
    * happens before any write, so the transaction simply rolls back.
    */
@@ -94,15 +94,15 @@ export class UsersService {
       const target = await m.findOneBy(User, { id });
       if (!target) throw new AppException(404, 'NOT_FOUND', 'User not found');
 
+      if (changesAccess && actorId === id) {
+        throw conflict('SELF_CHANGE', 'Cannot change your own role or active state');
+      }
       if (changesAccess && this.env.DEMO_MODE && DEMO_EMAILS.has(target.email)) {
         throw new AppException(
           403,
           'DEMO_PROTECTED',
           'Demo accounts cannot change role or active state',
         );
-      }
-      if (changesAccess && actorId === id) {
-        throw conflict('SELF_CHANGE', 'Cannot change your own role or active state');
       }
 
       if (changesAccess) {
