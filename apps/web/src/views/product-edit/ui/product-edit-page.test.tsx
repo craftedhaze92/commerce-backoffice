@@ -214,9 +214,11 @@ describe('ProductEditPage', () => {
     await screen.findByLabelText('SKU');
     await fillCreateForm(user);
     await user.click(screen.getByRole('button', { name: '저장' }));
-    const nameError = await screen.findByText('name is taken by policy');
-    expect(screen.getByLabelText('상품명')).toHaveAttribute('aria-describedby', nameError.id);
-    expect(screen.getByText('category does not exist')).toBeInTheDocument();
+    const errors = await screen.findAllByText('값을 확인해 주세요');
+    expect(errors).toHaveLength(2);
+    expect(screen.getByLabelText('상품명')).toHaveAttribute('aria-describedby', errors[0]!.id);
+    expect(screen.queryByText('name is taken by policy')).not.toBeInTheDocument();
+    expect(screen.queryByText('category does not exist')).not.toBeInTheDocument();
   });
 
   it('edit: PATCH sends only changed fields', async () => {

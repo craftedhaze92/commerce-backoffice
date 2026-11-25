@@ -25,6 +25,7 @@ import { diffUpdateInput, toCreateInput, useSaveProduct } from '../model/use-sav
 import { ImageUploader } from './image-uploader';
 
 const SKU_CONFLICT_MESSAGE = '이미 사용 중인 SKU입니다';
+const FIELD_INVALID_MESSAGE = '값을 확인해 주세요';
 const GENERIC_ERROR_MESSAGE = '저장에 실패했습니다. 잠시 후 다시 시도해주세요';
 const UPLOAD_PENDING_HINT = '이미지 업로드가 끝난 뒤 저장할 수 있습니다';
 
@@ -42,14 +43,13 @@ function isFieldName(value: unknown): value is FieldName {
   return typeof value === 'string' && (FIELD_NAMES as string[]).includes(value);
 }
 
-/** 400 details(`[{ field, messages[] }]`)에서 폼 필드 에러를 뽑는다. `images.0.id`는 `images`로 본다. */
+/** 400 details(`[{ field }]`)에서 폼 필드 에러를 뽑는다. 서버 문구는 쓰지 않고 고정 문구를 보인다. `images.0.id`는 `images`로 본다. */
 function fieldErrorsFrom(details: unknown): [FieldName, string][] {
   if (!Array.isArray(details)) return [];
   const result: [FieldName, string][] = [];
   for (const d of details as { field?: unknown; messages?: unknown }[]) {
     const field = typeof d?.field === 'string' ? d.field.split('.')[0] : undefined;
-    const message = Array.isArray(d?.messages) ? d.messages[0] : undefined;
-    if (isFieldName(field) && typeof message === 'string') result.push([field, message]);
+    if (isFieldName(field)) result.push([field, FIELD_INVALID_MESSAGE]);
   }
   return result;
 }

@@ -16,13 +16,12 @@ const ACCEPT = PRODUCT_LIMITS.imageMimeTypes.join(',');
 const MIME_TYPES: readonly string[] = PRODUCT_LIMITS.imageMimeTypes;
 const MAX_MB = PRODUCT_LIMITS.imageMaxBytes / (1024 * 1024);
 
-/** 서버가 준 검증 메시지가 있으면 그것을, 413이면 크기 안내를, 아니면 일반 문구를 쓴다. */
+/** 413이면 크기 안내를, 검증 실패면 형식 안내를, 아니면 일반 문구를 쓴다. 서버 문구는 쓰지 않는다. */
 function uploadErrorMessage(fileName: string, err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 413) return `${fileName}: ${MAX_MB}MB를 넘습니다`;
-    if (Array.isArray(err.details)) {
-      const first = (err.details[0] as { messages?: unknown } | undefined)?.messages;
-      if (Array.isArray(first) && typeof first[0] === 'string') return `${fileName}: ${first[0]}`;
+    if (err.code === 'VALIDATION_FAILED') {
+      return `${fileName}: 지원하지 않는 형식이거나 너무 큰 이미지입니다`;
     }
   }
   return `${fileName}: 업로드에 실패했습니다`;
