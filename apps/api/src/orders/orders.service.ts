@@ -99,12 +99,17 @@ export class OrdersService {
     if (!row) throw new AppException(404, 'NOT_FOUND', 'Order not found');
     const items = await this.items
       .createQueryBuilder('oi')
+      // products is joined by table name: orders/ must not import the products module's files.
+      // withDeleted: TypeORM would otherwise add "deletedAt IS NULL" to the join and hide exactly the rows we flag.
+      .withDeleted()
+      .leftJoin('products', 'p', 'p.id = oi.productId')
       .select('oi.id', 'id')
       .addSelect('oi.productId', 'productId')
       .addSelect('oi.sku', 'sku')
       .addSelect('oi.productName', 'productName')
       .addSelect('oi.quantity', 'quantity')
       .addSelect('oi.unitPrice', 'unitPrice')
+      .addSelect('(p."deletedAt" IS NOT NULL)', 'productDeleted')
       .where('oi.orderId = :id', { id })
       .orderBy('oi.sku', 'ASC')
       .addOrderBy('oi.id', 'ASC')

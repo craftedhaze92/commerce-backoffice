@@ -26,6 +26,7 @@ export interface OrderItemRow {
   productName: string;
   quantity: number;
   unitPrice: number;
+  productDeleted: boolean;
 }
 
 export interface OrderHistoryRow {
@@ -57,6 +58,7 @@ export function toItemView(r: OrderItemRow): OrderItemView {
     quantity: r.quantity,
     unitPrice: r.unitPrice,
     subtotal: r.unitPrice * r.quantity,
+    productDeleted: r.productDeleted,
   };
 }
 

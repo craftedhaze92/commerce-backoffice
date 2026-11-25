@@ -62,6 +62,8 @@ export interface OrderItemView {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  /** The product row is soft-deleted: the snapshot still shows, but its detail page is gone. */
+  productDeleted: boolean;
 }
 
 export interface OrderStatusHistoryView {

@@ -227,6 +227,33 @@ describe('orders list/detail (e2e)', () => {
     ]);
   });
 
+  it('detail: item of soft-deleted product has productDeleted true; live product false', async () => {
+    const id = await insertOrder({ no: 'ORD-X', createdAt: '2026-11-01T00:00:00Z' });
+    const cat = (await t.dataSource.query(
+      `INSERT INTO categories (name) VALUES ('c') RETURNING id`,
+    )) as Array<{ id: string }>;
+    for (const [sku, deleted] of [
+      ['LIVE-1', false],
+      ['GONE-1', true],
+    ] as const) {
+      const p = (await t.dataSource.query(
+        `INSERT INTO products (sku,name,"categoryId",price,status,description,"deletedAt")
+         VALUES ($1,'cur',$2,100,'ON_SALE','',$3) RETURNING id`,
+        [sku, cat[0]!.id, deleted ? '2026-11-02T00:00:00Z' : null],
+      )) as Array<{ id: string }>;
+      await t.dataSource.query(
+        `INSERT INTO order_items ("orderId","productId",sku,"productName",quantity,"unitPrice") VALUES ($1,$2,$3,'snap',1,100)`,
+        [id, p[0]!.id, sku],
+      );
+    }
+    const res = await get(`${URL}/${id}`);
+    const d = res.body as OrderDetail;
+    expect(d.items.map((i) => [i.sku, i.productDeleted])).toEqual([
+      ['GONE-1', true],
+      ['LIVE-1', false],
+    ]);
+  });
+
   it('detail unknown -> 404; non-uuid -> 400', async () => {
     const res = await get(`${URL}/00000000-0000-4000-8000-000000000000`);
     expect(res.status).toBe(404);

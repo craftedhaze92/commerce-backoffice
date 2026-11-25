@@ -1,5 +1,6 @@
 import { Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
-import { ApiCookieAuth } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOkResponse, ApiProduces, ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import type { Response } from 'express';
 import { Role, type OrderDetail, type OrderListItem, type Paginated } from '@bo/contracts';
 import { CurrentUser, Roles, type AuthUser } from '../common/decorators.js';
@@ -7,7 +8,11 @@ import { ListOrdersQuery } from './dto/list-orders.query.js';
 import { OrderTransitionsService } from './order-transitions.service.js';
 import { OrdersService } from './orders.service.js';
 
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 @ApiCookieAuth('bo_at')
+@ApiTags('orders')
+@ApiErrors()
 @Controller('orders')
 export class OrdersController {
   constructor(
@@ -24,6 +29,11 @@ export class OrdersController {
   /** Declared before ':id' so "export" is not parsed as an id. */
   @Roles(Role.MANAGER)
   @Get('export')
+  @ApiProduces(XLSX)
+  @ApiOkResponse({
+    description: 'xlsx file',
+    content: { [XLSX]: { schema: { type: 'string', format: 'binary' } } },
+  })
   export(@Query() q: ListOrdersQuery, @Res() res: Response): Promise<void> {
     return this.orders.export(q, res);
   }

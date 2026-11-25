@@ -1,4 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import type { Request, Response } from 'express';
 import type { MeResponse } from '@bo/contracts';
 import { ENV } from '../config/env.module.js';
@@ -10,6 +12,8 @@ import { type AuthUser, CurrentUser, Public } from '../common/decorators.js';
 import { LoginDto } from './dto/login.dto.js';
 import { AppException } from '../common/app-exception.js';
 
+@ApiTags('auth')
+@ApiErrors(401)
 @Controller('auth')
 export class AuthController {
   constructor(

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { ApiCookieAuth } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import { Role, type Paginated, type UserListItem } from '@bo/contracts';
 import { CurrentUser, Roles, type AuthUser } from '../common/decorators.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
@@ -8,6 +9,8 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UsersService } from './users.service.js';
 
 @ApiCookieAuth('bo_at')
+@ApiTags('users')
+@ApiErrors()
 @Controller('users')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
