@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { RolesGuard } from './auth/roles.guard.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { CsrfGuard } from './common/csrf.guard.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 import { ENV, EnvModule } from './config/env.module.js';
 import type { Env } from './config/env.js';
 import { buildDataSourceOptions } from './database/data-source.js';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module.js';
     InventoryModule,
     ProductsModule,
     OrdersModule,
+    DashboardModule,
     LoggerModule.forRootAsync({
       inject: [ENV],
       useFactory: (env: Env) => ({

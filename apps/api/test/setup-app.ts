@@ -21,7 +21,10 @@ export interface TestApp {
  * (process.env is shared: the overridden keys are restored by stop(), so apps in one file should not overlap). Containers are shared and started by global-setup.ts.
  */
 export async function createTestApp(
-  options: { env?: Partial<Record<string, string>> } = {},
+  options: {
+    env?: Partial<Record<string, string>>;
+    providers?: Array<{ provide: unknown; useValue: unknown }>;
+  } = {},
 ): Promise<TestApp> {
   const infra = inject('infra');
   const suffix = randomBytes(6).toString('hex');
@@ -68,7 +71,11 @@ export async function createTestApp(
     }
     Object.assign(process.env, overrides);
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    let builder = Test.createTestingModule({ imports: [AppModule] });
+    for (const p of options.providers ?? []) {
+      builder = builder.overrideProvider(p.provide).useValue(p.useValue);
+    }
+    const moduleRef = await builder.compile();
     app = moduleRef.createNestApplication({ logger: false });
     configureApp(app, validateEnv(process.env));
     await app.init();

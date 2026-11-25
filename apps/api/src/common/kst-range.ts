@@ -33,3 +33,16 @@ export function kstDayRange(from?: string, to?: string): { gte?: Date; lt?: Date
   }
   return range;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** KST calendar day (YYYY-MM-DD) that contains the instant. */
+export function kstDateOf(at: Date): string {
+  return new Date(at.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Shifts a YYYY-MM-DD day by n calendar days (n may be negative). */
+export function addKstDays(day: string, n: number): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+}

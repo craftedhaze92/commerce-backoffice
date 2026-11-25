@@ -240,21 +240,21 @@ PENDING ──확정──▶ CONFIRMED ──출고──▶ SHIPPED ──완�
 
 ### 엔드포인트 개요
 
-| 메서드·경로                                                                          | 권한           | 설명                                                                               |
-| ------------------------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------- |
-| `POST /auth/login` · `/auth/refresh` · `/auth/logout` · `GET /auth/me`               | -              | 인증                                                                               |
-| `GET /products`                                                                      | VIEWER         | 검색(name·sku), categoryId, status, minPrice·maxPrice, 재고부족 여부, 정렬, 페이지 |
-| `GET /products/:id`                                                                  | VIEWER         |                                                                                    |
-| `POST·PATCH·DELETE /products/:id`                                                    | MANAGER        | 삭제는 soft delete                                                                 |
-| `POST /products/images`                                                              | MANAGER        | multipart, 이미지 → `{ id, url, thumbUrl }`                                        |
-| `PATCH /products/:id/inventory`                                                      | MANAGER        | 수동 조정 (사유 필수, 트랜잭션 + 이력)                                             |
-| `GET /orders`                                                                        | VIEWER         | status, 기간(from·to), 주문번호·고객명 검색, 페이지                                |
-| `GET /orders/:id`                                                                    | VIEWER         | 품목·상태 이력 포함                                                                |
-| `POST /orders/:id/confirm·ship·deliver·cancel`                                       | MANAGER        | 상태 전이                                                                          |
-| `GET /products/export` · `GET /orders/export`                                        | MANAGER        | 목록과 같은 필터 쿼리 → `.xlsx`                                                    |
-| `GET /dashboard/summary` · `/sales-trend?days=30` · `/category-sales` · `/low-stock` | VIEWER         | 집계                                                                               |
-| `GET·POST·PATCH /users`                                                              | ADMIN          | 사용자 관리                                                                        |
-| `POST /dev/orders/random`                                                            | 개발 환경 전용 | 가상 주문 생성 (데모용)                                                            |
+| 메서드·경로                                                                   | 권한           | 설명                                                                               |
+| ----------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `POST /auth/login` · `/auth/refresh` · `/auth/logout` · `GET /auth/me`        | -              | 인증                                                                               |
+| `GET /products`                                                               | VIEWER         | 검색(name·sku), categoryId, status, minPrice·maxPrice, 재고부족 여부, 정렬, 페이지 |
+| `GET /products/:id`                                                           | VIEWER         |                                                                                    |
+| `POST·PATCH·DELETE /products/:id`                                             | MANAGER        | 삭제는 soft delete                                                                 |
+| `POST /products/images`                                                       | MANAGER        | multipart, 이미지 → `{ id, url, thumbUrl }`                                        |
+| `PATCH /products/:id/inventory`                                               | MANAGER        | 수동 조정 (사유 필수, 트랜잭션 + 이력)                                             |
+| `GET /orders`                                                                 | VIEWER         | status, 기간(from·to), 주문번호·고객명 검색, 페이지                                |
+| `GET /orders/:id`                                                             | VIEWER         | 품목·상태 이력 포함                                                                |
+| `POST /orders/:id/confirm·ship·deliver·cancel`                                | MANAGER        | 상태 전이                                                                          |
+| `GET /products/export` · `GET /orders/export`                                 | MANAGER        | 목록과 같은 필터 쿼리 → `.xlsx`                                                    |
+| `GET /dashboard/summary` · `/sales-trend?days=30` · `/category-sales?days=30` | VIEWER         | 집계. 최근 주문·재고 부족은 목록 API 재사용                                        |
+| `GET·POST·PATCH /users`                                                       | ADMIN          | 사용자 관리                                                                        |
+| `POST /dev/orders/random`                                                     | 개발 환경 전용 | 가상 주문 생성 (데모용)                                                            |
 
 ## 9. 파일 업로드 / 이미지 처리
 
