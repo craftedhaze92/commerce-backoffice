@@ -3,21 +3,24 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional, ApiResponse } from '@nestjs/swagger';
 import type { ApiErrorBody as ApiErrorBodyContract, ErrorCode } from '@bo/contracts';
 
-const ERROR_CODES = [
-  'VALIDATION_FAILED',
-  'UNAUTHORIZED',
-  'INVALID_CREDENTIALS',
-  'TOKEN_REUSED',
-  'FORBIDDEN',
-  'CSRF_REQUIRED',
-  'NOT_FOUND',
-  'CONFLICT',
-  'INSUFFICIENT_STOCK',
-  'EXPORT_TOO_LARGE',
-  'DEMO_PROTECTED',
-  'TOO_MANY_REQUESTS',
-  'INTERNAL',
-] as const satisfies readonly ErrorCode[];
+// A Record over the ErrorCode union: adding a code to the contract without listing it here
+// fails typecheck, so the Swagger enum cannot drift.
+const ALL: Record<ErrorCode, true> = {
+  VALIDATION_FAILED: true,
+  UNAUTHORIZED: true,
+  INVALID_CREDENTIALS: true,
+  TOKEN_REUSED: true,
+  FORBIDDEN: true,
+  CSRF_REQUIRED: true,
+  NOT_FOUND: true,
+  CONFLICT: true,
+  INSUFFICIENT_STOCK: true,
+  EXPORT_TOO_LARGE: true,
+  DEMO_PROTECTED: true,
+  TOO_MANY_REQUESTS: true,
+  INTERNAL: true,
+};
+const ERROR_CODES = Object.keys(ALL) as ErrorCode[];
 
 /** Swagger schema for the shared error body (the contract type is an interface, so it needs a class here). */
 export class ApiErrorBody implements ApiErrorBodyContract {

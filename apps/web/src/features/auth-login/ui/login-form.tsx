@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MeResponse } from '@bo/contracts';
 import { sessionKeys } from '@/entities/session';
-import { ApiError, http } from '@/shared/api';
+import { ApiError, errorMessage, http, type ErrorMessageOverrides } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -20,8 +20,12 @@ const DEMO_ACCOUNTS = [
   { label: '뷰어', email: 'viewer@demo.com' },
 ] as const;
 
-const INVALID_CREDENTIALS_MESSAGE = '이메일 또는 비밀번호가 올바르지 않습니다';
 const GENERIC_ERROR_MESSAGE = '로그인에 실패했습니다. 잠시 후 다시 시도해주세요';
+/** Codes with login-specific copy; every other failure shows `GENERIC_ERROR_MESSAGE`. */
+const LOGIN_MESSAGES = {
+  INVALID_CREDENTIALS: '이메일 또는 비밀번호가 올바르지 않습니다',
+  TOO_MANY_REQUESTS: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+} as const satisfies ErrorMessageOverrides;
 
 interface LoginFormProps {
   onSuccess: (me: MeResponse) => void;
@@ -48,8 +52,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     },
     onError: (error) => {
       setFormError(
-        error instanceof ApiError && error.code === 'INVALID_CREDENTIALS'
-          ? INVALID_CREDENTIALS_MESSAGE
+        error instanceof ApiError && error.code in LOGIN_MESSAGES
+          ? errorMessage(error, LOGIN_MESSAGES)
           : GENERIC_ERROR_MESSAGE,
       );
     },

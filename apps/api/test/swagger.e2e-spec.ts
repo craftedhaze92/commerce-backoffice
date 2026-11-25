@@ -67,8 +67,27 @@ describe('swagger document (e2e)', () => {
     },
   );
 
-  it('components.schemas has ApiErrorBody', () => {
-    expect(doc.components?.schemas?.['ApiErrorBody']).toBeDefined();
+  it('components.schemas has ApiErrorBody with every ErrorCode in its code enum', () => {
+    const schema = doc.components?.schemas?.['ApiErrorBody'] as
+      { properties?: { code?: { enum?: string[] } } } | undefined;
+    expect(schema).toBeDefined();
+    expect([...(schema?.properties?.code?.enum ?? [])].sort()).toEqual(
+      [
+        'VALIDATION_FAILED',
+        'UNAUTHORIZED',
+        'INVALID_CREDENTIALS',
+        'TOKEN_REUSED',
+        'FORBIDDEN',
+        'CSRF_REQUIRED',
+        'NOT_FOUND',
+        'CONFLICT',
+        'INSUFFICIENT_STOCK',
+        'EXPORT_TOO_LARGE',
+        'DEMO_PROTECTED',
+        'TOO_MANY_REQUESTS',
+        'INTERNAL',
+      ].sort(),
+    );
   });
 
   it('inventory endpoints are tagged inventory', () => {
