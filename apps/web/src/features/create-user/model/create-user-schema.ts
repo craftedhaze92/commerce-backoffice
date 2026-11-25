@@ -7,6 +7,7 @@ export const createUserSchema = z
       .string()
       .trim()
       .min(1, '이메일을 입력하세요')
+      .max(USER_LIMITS.emailMax, `이메일은 ${USER_LIMITS.emailMax}자 이하여야 합니다`)
       .pipe(z.email('이메일 형식이 올바르지 않습니다')),
     name: z
       .string()

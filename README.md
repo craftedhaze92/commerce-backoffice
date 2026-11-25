@@ -141,7 +141,9 @@ pnpm dev
 
 ## 공개 데모
 
-- `DEMO_MODE=true`이면 시드 데모 계정 3개(`admin@demo.com`·`manager@demo.com`·`viewer@demo.com`)의 역할·활성 상태 변경이 403 `DEMO_PROTECTED`로 막힌다. 이름 변경은 허용한다.
+- 데모 데이터는 모든 방문자가 함께 쓰고, 누구나 고칠 수 있다. 상품·주문을 바꾸면 다른 방문자에게도 그대로 보인다.
+- `DEMO_MODE=true`이면 시드 데모 계정 3개(`admin@demo.com`·`manager@demo.com`·`viewer@demo.com`)는 이름을 포함해 어떤 변경도 403 `DEMO_PROTECTED`로 막힌다.
+- `DEMO_MODE=true`이면 사용자 수가 20명(`DEMO_MAX_USERS`)에 이르면 사용자 추가가 403 `DEMO_PROTECTED`로 막힌다.
 - 로그인 시도 제한이 켜져 있다. 프록시 뒤에서는 `TRUST_PROXY`로 신뢰할 홉 수를 맞춰야 한다.
 - 데모 비밀번호는 위 [데모 계정](#데모-계정)과 같다.
 - 배포 절차(Cloudflare R2, Railway, Vercel)와 `TRUST_PROXY` 확인 방법은 [docs/deploy.md](docs/deploy.md)에 있다.

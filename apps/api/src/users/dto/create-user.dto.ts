@@ -11,6 +11,7 @@ export class CreateUserDto implements CreateUserInput {
     typeof value === 'string' ? normalizeEmail(value) : value,
   )
   @IsEmail()
+  @MaxLength(USER_LIMITS.emailMax)
   email: string;
 
   @Transform(trimString)

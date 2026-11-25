@@ -4,7 +4,7 @@ import { createTestApp, type TestApp } from './setup-app.js';
 import { AppException } from '../src/common/app-exception.js';
 import { hashPassword } from '../src/common/password.js';
 import { User } from '../src/users/user.entity.js';
-import { UsersService } from '../src/users/users.service.js';
+import { DEMO_MAX_USERS, UsersService } from '../src/users/users.service.js';
 
 const PW = 'demo1234!';
 const URL = '/api/v1/users';
@@ -131,6 +131,14 @@ describe('users manage (e2e)', () => {
     ['name too long', { ...validCreate, name: 'n'.repeat(51) }],
     ['role=ROOT', { ...validCreate, role: 'ROOT' }],
     ['bad email', { ...validCreate, email: 'not-an-email' }],
+    // 64 + 1 + 190 = 255 chars: every label is within limits, only the total is too long.
+    [
+      'email longer than 254',
+      {
+        ...validCreate,
+        email: `${'l'.repeat(64)}@${'d'.repeat(63)}.${'d'.repeat(63)}.${'d'.repeat(58)}.com`,
+      },
+    ],
     ['extra field', { ...validCreate, isActive: false }],
   ])('create 400: %s', async (_label, body) => {
     const res = await post(server, adminAt, body);
@@ -284,7 +292,24 @@ describe('users manage (e2e)', () => {
     expect(res.status).toBe(200);
   });
 
-  it('DEMO_MODE=true: role/isActive change on viewer@demo.com → 403 DEMO_PROTECTED; name change 200; non-demo user 200', async () => {
+  const seedViewers = async (target: TestApp, n: number) => {
+    const repo = target.dataSource.getRepository(User);
+    const passwordHash = await hashPassword(PW);
+    await repo.save(
+      Array.from({ length: n }, (_, i) =>
+        repo.create({ email: `fill${i}@x.com`, name: `fill${i}`, role: Role.VIEWER, passwordHash }),
+      ),
+    );
+  };
+
+  // Runs before the DEMO_MODE=true apps below: passport keeps one global 'jwt' strategy, so
+  // once a second app has booted and stopped, the outer app's tokens no longer validate.
+  it('DEMO_MODE=false: no cap on user creation', async () => {
+    await seedViewers(t, DEMO_MAX_USERS);
+    const res = await post(server, adminAt, validCreate);
+    expect(res.status).toBe(201);
+  });
+  it('DEMO_MODE=true: any change to a demo account → 403 DEMO_PROTECTED; non-demo user 200', async () => {
     const demo = await createTestApp({ env: { DEMO_MODE: 'true' } });
     try {
       const s = demo.app.getHttpServer();
@@ -298,20 +323,28 @@ describe('users manage (e2e)', () => {
         { role: Role.MANAGER },
         { isActive: false },
         { name: 'n', role: Role.ADMIN },
+        { name: '데모 뷰어' },
       ]) {
         const res = await patch(s, at, viewer.id, body);
         expect(res.status).toBe(403);
         expect(res.body.code).toBe('DEMO_PROTECTED');
       }
-      const renamed = await patch(s, at, viewer.id, { name: '데모 뷰어' });
-      expect(renamed.status).toBe(200);
-      expect(renamed.body).toMatchObject({ name: '데모 뷰어', role: Role.VIEWER, isActive: true });
+      const [row] = (await demo.dataSource.query(
+        'SELECT name, role, "isActive" FROM users WHERE id = $1',
+        [viewer.id],
+      )) as Array<{ name: string; role: Role; isActive: boolean }>;
+      expect(row).toEqual({ name: 'viewer@demo.com-name', role: Role.VIEWER, isActive: true });
 
-      const changed = await patch(s, at, other.id, { role: Role.MANAGER, isActive: false });
+      const changed = await patch(s, at, other.id, {
+        name: '변경',
+        role: Role.MANAGER,
+        isActive: false,
+      });
       expect(changed.status).toBe(200);
-      expect(changed.body).toMatchObject({ role: Role.MANAGER, isActive: false });
+      expect(changed.body).toMatchObject({ name: '변경', role: Role.MANAGER, isActive: false });
 
-      // Self role/isActive change is SELF_CHANGE under DEMO_MODE, for demo and non-demo admins.
+      // Self role/isActive change is still SELF_CHANGE (checked first) for demo and non-demo
+      // admins; a demo admin renaming itself is DEMO_PROTECTED.
       for (const body of [{ role: Role.VIEWER }, { isActive: false }]) {
         const demoSelf = await patch(s, at, demoAdmin.id, body);
         expect(demoSelf.status).toBe(409);
@@ -320,10 +353,39 @@ describe('users manage (e2e)', () => {
           details: { reason: 'SELF_CHANGE' },
         });
       }
+      const selfRename = await patch(s, at, demoAdmin.id, { name: '내 이름' });
+      expect(selfRename.status).toBe(403);
+      expect(selfRename.body.code).toBe('DEMO_PROTECTED');
+
       const plainAt = (await loginCookies(s, 'plain-admin@x.com')).at;
       const self = await patch(s, plainAt, plainAdmin.id, { role: Role.VIEWER });
       expect(self.status).toBe(409);
       expect(self.body.details).toEqual({ reason: 'SELF_CHANGE' });
+      const plainRename = await patch(s, plainAt, plainAdmin.id, { name: '평범한 관리자' });
+      expect(plainRename.status).toBe(200);
+    } finally {
+      await demo.stop();
+    }
+  });
+
+  it(`DEMO_MODE=true: POST /users → 403 DEMO_PROTECTED once ${DEMO_MAX_USERS} users exist`, async () => {
+    const demo = await createTestApp({ env: { DEMO_MODE: 'true' } });
+    try {
+      const s = demo.app.getHttpServer();
+      await seedUser(demo, 'admin@demo.com', Role.ADMIN);
+      await seedViewers(demo, DEMO_MAX_USERS - 2);
+      const { at } = await loginCookies(s, 'admin@demo.com');
+
+      const last = await post(s, at, { ...validCreate, email: 'last@x.com' });
+      expect(last.status).toBe(201);
+
+      const over = await post(s, at, { ...validCreate, email: 'over@x.com' });
+      expect(over.status).toBe(403);
+      expect(over.body.code).toBe('DEMO_PROTECTED');
+      const [{ n }] = (await demo.dataSource.query('SELECT count(*)::int AS n FROM users')) as [
+        { n: number },
+      ];
+      expect(n).toBe(DEMO_MAX_USERS);
     } finally {
       await demo.stop();
     }

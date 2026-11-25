@@ -68,7 +68,7 @@
 | `TRUST_PROXY`            | `1`                                             | 5단계에서 실제 홉 수를 확인해 조정한다.                                                    |
 | `LOGIN_THROTTLE_LIMIT`   | `10`                                            | (IP, 이메일)마다 허용 횟수. 생략하면 10                                                    |
 | `LOGIN_THROTTLE_TTL_SEC` | `600`                                           | 생략하면 600초                                                                             |
-| `DEMO_MODE`              | `true`                                          | 데모 계정의 역할·활성 상태 변경을 막는다.                                                  |
+| `DEMO_MODE`              | `true`                                          | 데모 계정의 모든 변경(이름 포함)을 막고, 사용자 수를 20명으로 제한한다.                    |
 | `SEED_PASSWORD`          | `demo1234!`                                     | 시드 데모 계정 비밀번호. README의 데모 비밀번호와 같아야 로그인 화면 빠른 선택이 동작한다. |
 | `S3_ENDPOINT`            | `https://<account-id>.r2.cloudflarestorage.com` | 1단계                                                                                      |
 | `S3_REGION`              | `auto`                                          | R2는 `auto`를 쓴다.                                                                        |

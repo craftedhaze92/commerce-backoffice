@@ -105,4 +105,45 @@ describe('CreateUserDialog', () => {
     expect(await screen.findByText(/일시적인 오류가 발생했습니다/)).toBeInTheDocument();
     expect(screen.queryByText('db exploded')).not.toBeInTheDocument();
   });
+
+  it('403 DEMO_PROTECTED shows the demo user-limit message under the form', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('/api/v1/users', () =>
+        HttpResponse.json(
+          { statusCode: 403, code: 'DEMO_PROTECTED', message: 'Demo mode allows at most 20 users' },
+          { status: 403 },
+        ),
+      ),
+    );
+    await openDialog(user);
+    await user.type(screen.getByLabelText('이메일'), 'a@example.com');
+    await user.type(screen.getByLabelText('이름'), '이름');
+    await user.type(screen.getByLabelText('초기 비밀번호'), 'password1!');
+    await user.click(screen.getByRole('button', { name: '추가' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '데모 환경에서는 사용자를 더 추가할 수 없습니다.',
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('rejects an email longer than 254 chars inline', async () => {
+    let called = false;
+    const user = userEvent.setup();
+    server.use(
+      http.post('/api/v1/users', () => {
+        called = true;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    await openDialog(user);
+    const email = `${'l'.repeat(64)}@${'d'.repeat(63)}.${'d'.repeat(63)}.${'d'.repeat(58)}.com`;
+    await user.click(screen.getByLabelText('이메일'));
+    await user.paste(email);
+    await user.type(screen.getByLabelText('이름'), '이름');
+    await user.type(screen.getByLabelText('초기 비밀번호'), 'password1!');
+    await user.click(screen.getByRole('button', { name: '추가' }));
+    expect(await screen.findByText('이메일은 254자 이하여야 합니다')).toBeInTheDocument();
+    expect(called).toBe(false);
+  });
 });

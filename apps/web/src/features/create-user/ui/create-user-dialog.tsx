@@ -23,6 +23,7 @@ import { useCreateUser } from '../model/use-create-user';
 const DEFAULTS: CreateUserFormInput = { email: '', name: '', role: Role.VIEWER, password: '' };
 const ROLES = [Role.ADMIN, Role.MANAGER, Role.VIEWER] as const;
 const EMAIL_TAKEN = '이미 사용 중인 이메일입니다';
+const DEMO_USER_LIMIT = '데모 환경에서는 사용자를 더 추가할 수 없습니다.';
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -93,7 +94,7 @@ export function CreateUserDialog() {
                     setError('email', { message: EMAIL_TAKEN }, { shouldFocus: true });
                     return;
                   }
-                  setFormError(errorMessage(error));
+                  setFormError(errorMessage(error, { DEMO_PROTECTED: DEMO_USER_LIMIT }));
                 },
               });
             })}
