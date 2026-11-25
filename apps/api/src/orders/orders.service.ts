@@ -1,19 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  EXPORT_LIMITS,
-  type ExportTooLargeDetails,
-  type OrderDetail,
-  type OrderListItem,
-  type Paginated,
-} from '@bo/contracts';
+import { type OrderDetail, type OrderListItem, type Paginated } from '@bo/contracts';
 import type { Response } from 'express';
 import { DataSource, type ObjectLiteral, Repository, type SelectQueryBuilder } from 'typeorm';
 import { AppException } from '../common/app-exception.js';
 import { CLOCK, type Clock } from '../common/clock.js';
-import { kstDateOf } from '../common/kst-range.js';
-import { contentDisposition } from '../common/xlsx/content-disposition.js';
-import { writeXlsx } from '../common/xlsx/xlsx-writer.js';
+import { streamExport } from '../common/xlsx/stream-export.js';
 import { toPaginated } from '../common/pagination.js';
 import type { ListOrdersQuery } from './dto/list-orders.query.js';
 import { OrderItem } from './order-item.entity.js';
@@ -73,55 +65,30 @@ export class OrdersService {
    * Count and every batch read share one REPEATABLE READ snapshot, via that transaction's manager.
    */
   async export(q: ListOrdersQuery, res: Response): Promise<void> {
-    await this.dataSource.transaction('REPEATABLE READ', async (manager) => {
-      const orders = manager.getRepository(Order);
-      // Same validation order as list(): a bad sort/from/to is a 400 even when nothing matches.
-      const buildBatchQuery = () =>
-        buildOrderListQuery(this.selectRow(orders.createQueryBuilder('o')), q);
-      buildBatchQuery();
-      const total = await applyOrderFilters(orders.createQueryBuilder('o'), q).getCount();
-      if (total > EXPORT_LIMITS.maxRows) {
-        const details: ExportTooLargeDetails = { total, maxRows: EXPORT_LIMITS.maxRows };
-        throw new AppException(
-          422,
-          'EXPORT_TOO_LARGE',
-          `Too many rows to export (${total} > ${EXPORT_LIMITS.maxRows})`,
-          details,
-        );
-      }
-
-      const day = kstDateOf(this.clock()).replaceAll('-', '');
-      res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      );
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader(
-        'Content-Disposition',
-        contentDisposition(`주문목록_${day}.xlsx`, `orders_${day}.xlsx`),
-      );
-
-      async function* batches() {
-        for (let offset = 0; offset < total; offset += EXPORT_LIMITS.batchSize) {
-          const rows = await buildBatchQuery()
-            .offset(offset)
-            .limit(EXPORT_LIMITS.batchSize)
-            .getRawMany<OrderRow>();
-          if (rows.length === 0) return;
-          yield rows.map(toExportRow);
-        }
-      }
-
-      try {
-        await writeXlsx(res, '주문', ORDER_EXPORT_COLUMNS, batches());
-      } catch (err) {
-        // Headers are already sent: cut the connection so the client cannot take a truncated file as complete.
-        this.logger.error(
-          `Order export failed mid-stream: ${err instanceof Error ? err.message : String(err)}`,
-          err instanceof Error ? err.stack : undefined,
-        );
-        res.destroy(err instanceof Error ? err : new Error(String(err)));
-      }
+    await streamExport({
+      dataSource: this.dataSource,
+      res,
+      logger: this.logger,
+      now: this.clock(),
+      filename: '주문목록',
+      asciiFilename: 'orders',
+      sheetName: '주문',
+      columns: ORDER_EXPORT_COLUMNS,
+      open: async (manager) => {
+        const orders = manager.getRepository(Order);
+        // Same validation order as list(): a bad sort/from/to is a 400 even when nothing matches.
+        const buildBatchQuery = () =>
+          buildOrderListQuery(this.selectRow(orders.createQueryBuilder('o')), q);
+        buildBatchQuery();
+        const total = await applyOrderFilters(orders.createQueryBuilder('o'), q).getCount();
+        return {
+          total,
+          fetchBatch: async (offset, limit) =>
+            (await buildBatchQuery().offset(offset).limit(limit).getRawMany<OrderRow>()).map(
+              toExportRow,
+            ),
+        };
+      },
     });
   }
 
