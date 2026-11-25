@@ -1,1 +1,1 @@
-export { useUsers, USERS_PAGE_SIZE } from './model/use-users';
+export { useUsers, userKeys, USERS_PAGE_SIZE } from './model/use-users';
