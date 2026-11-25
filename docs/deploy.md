@@ -9,6 +9,8 @@
                                       ↑ api는 S3 API로 R2에 업로드한다
 ```
 
+> 클라우드 콘솔의 메뉴 이름과 화면 구성은 바뀔 수 있다. 이 문서의 단계는 작성 시점의 화면을 기준으로 한다.
+
 브라우저는 Vercel 도메인만 상대한다. 인증 쿠키(`bo_at`, `bo_rt`)도 Vercel 도메인의 1st-party 쿠키로 저장된다.
 
 > **사용자가 직접 할 일:** Cloudflare·Railway·Vercel 계정 생성, 결제 수단 등록, 약관 동의, 그리고 비밀 값(`JWT_SECRET`, R2 액세스 키 등) 생성과 입력은 사용자가 각 서비스 콘솔에서 직접 한다. 이 문서의 URL과 값은 모두 자리표시자(`<...>`)다. 실제 값을 저장소에 커밋하지 않는다.
@@ -137,5 +139,5 @@ Vercel 주소에서 확인한다.
    - 본인의 공인 IP(공인 IP 확인 서비스로 미리 알아 둔다)가 `x-forwarded-for`의 오른쪽에서 몇 번째인지 센다. 그 순번이 `TRUST_PROXY` 값이다. 예: `<내 IP>, <Vercel IP>`면 2다.
    - `req.ip`가 본인 IP와 같아질 때까지 값을 맞추고 다시 배포한다.
 3. 위조 확인: `curl -X POST https://<vercel-app>.vercel.app/api/v1/auth/login -H 'X-Requested-With: fetch' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 203.0.113.9' -d '{"email":"x@example.com","password":"x"}'`를 보내고, 로그의 `req.ip`가 `203.0.113.9`가 **아닌지** 확인한다.
-   - 한계: Vercel을 거치지 않고 Railway 주소로 직접 보내면 홉이 하나 적다. `TRUST_PROXY=2`라면 이 경로에서는 위조한 값이 `req.ip`가 될 수 있다. 공개 데모에서는 이 한계를 받아들인다. 막아야 한다면 Vercel에서만 붙이는 비밀 헤더를 api가 확인하는 식으로 직접 접근을 차단한다.
+   - 한계: Vercel을 거치지 않고 Railway 주소로 직접 보내면 홉이 하나 적다. `TRUST_PROXY=2`라면 이 경로에서는 위조한 값이 `req.ip`가 될 수 있다. `TRUST_PROXY=2`에서는 Railway 도메인을 아는 사람이라면 누구든 `X-Forwarded-For`의 가장 왼쪽 값을 계속 바꿔 가며 로그인 제한을 완전히 우회할 수 있다(IP 하나를 위조하는 데서 그치지 않는다). 같은 위조 curl을 Vercel이 아니라 Railway 도메인으로 직접 보내 로그의 `req.ip`가 위조한 값이 되는지 확인해 본다. 공개 데모에서는 이 한계를 받아들인다. 막아야 한다면 Vercel에서만 붙이는 비밀 헤더를 api가 확인하는 식으로 직접 접근을 차단한다.
 4. 확인이 끝나면 임시 로그를 **지우고** 다시 배포한다. IP는 개인정보이므로 남겨 두지 않는다.
