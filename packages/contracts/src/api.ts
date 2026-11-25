@@ -8,6 +8,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'INSUFFICIENT_STOCK'
+  | 'EXPORT_TOO_LARGE'
   | 'INTERNAL';
 
 export interface ApiErrorBody {
