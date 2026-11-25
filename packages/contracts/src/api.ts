@@ -9,6 +9,8 @@ export type ErrorCode =
   | 'CONFLICT'
   | 'INSUFFICIENT_STOCK'
   | 'EXPORT_TOO_LARGE'
+  | 'DEMO_PROTECTED'
+  | 'TOO_MANY_REQUESTS'
   | 'INTERNAL';
 
 export interface ApiErrorBody {

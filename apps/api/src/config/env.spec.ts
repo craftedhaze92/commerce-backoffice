@@ -59,4 +59,11 @@ describe('validateEnv', () => {
   it('coerces numeric strings', () => {
     expect(validateEnv({ ...valid, PORT: '5000' }).PORT).toBe(5000);
   });
+
+  it('DEMO_MODE defaults to false and parses "true"', () => {
+    expect(validateEnv(valid).DEMO_MODE).toBe(false);
+    expect(validateEnv({ ...valid, DEMO_MODE: 'true' }).DEMO_MODE).toBe(true);
+    expect(validateEnv({ ...valid, DEMO_MODE: 'false' }).DEMO_MODE).toBe(false);
+    expect(() => validateEnv({ ...valid, DEMO_MODE: 'yes' })).toThrow(/DEMO_MODE/);
+  });
 });

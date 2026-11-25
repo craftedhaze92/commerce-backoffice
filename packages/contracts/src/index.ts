@@ -2,6 +2,7 @@ export * from './role';
 export * from './permission';
 export * from './api';
 export * from './auth';
+export * from './user';
 export * from './product';
 export * from './order';
 export * from './inventory';
