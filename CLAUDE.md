@@ -75,6 +75,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build && pnpm 
 - 접두사는 `/api/v1`(`API_PREFIX`)이고, Swagger는 `/api/docs`다.
 - 에러는 항상 `{ statusCode, code: ErrorCode, message, details? }`다. `AppException(status, code, message, details?)`으로 던지고, 500의 원문 메시지는 응답에 담지 않는다.
 - 목록은 `Paginated<T>` = `{ items, meta: { page, size, total, totalPages } }`다. `page ≥ 1`, `1 ≤ size ≤ 100`이며, 정렬 컬럼은 화이트리스트로 제한한다.
+- 엑셀은 `common/xlsx/`의 writer만 쓰고, 목록과 같은 DTO·쿼리 빌더를 재사용한다.
 - 상태를 바꾸는 요청(POST·PATCH·PUT·DELETE)은 `X-Requested-With: fetch` 헤더가 필요하다(`CsrfGuard`).
 
 **인증·권한:**
