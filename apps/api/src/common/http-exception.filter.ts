@@ -9,6 +9,7 @@ const STATUS_TO_CODE: Record<number, ErrorCode> = {
   403: 'FORBIDDEN',
   404: 'NOT_FOUND',
   409: 'CONFLICT',
+  429: 'TOO_MANY_REQUESTS',
 };
 
 function messageOf(response: string | object, fallback: string): string {
@@ -39,7 +40,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     host.switchToHttp().getResponse<Response>().status(body.statusCode).json(body);
   }
 
-  /** Any 4xx keeps its real status; unlisted ones (413, 405, 429, ...) fall back to VALIDATION_FAILED. */
+  /** Any 4xx keeps its real status; unlisted ones (413, 405, ...) fall back to VALIDATION_FAILED. */
   private clientError(status: number, message: string): ApiErrorBody {
     const code = STATUS_TO_CODE[status];
     if (!code) this.logger.warn(`Unmapped ${status} client error: ${message}`);

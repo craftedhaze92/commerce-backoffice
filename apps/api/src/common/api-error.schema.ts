@@ -43,6 +43,7 @@ export function ApiErrors(...statuses: number[]): MethodDecorator & ClassDecorat
     403: 'Role too low, or CSRF header missing',
     404: 'Not found',
     409: 'Conflict with current state',
+    429: 'Too many attempts; see Retry-After',
   };
   return applyDecorators(
     ...list.map((status) =>

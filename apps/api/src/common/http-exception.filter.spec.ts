@@ -64,13 +64,13 @@ describe('AllExceptionsFilter', () => {
     expect(body).toMatchObject({ statusCode: 413, code: 'VALIDATION_FAILED' });
     expect(logWarn).toHaveBeenCalled();
     expect(logError).not.toHaveBeenCalled();
-    const nest = run(new HttpException('slow down', 429));
-    expect(nest.body).toMatchObject({
-      statusCode: 429,
-      code: 'VALIDATION_FAILED',
-      message: 'slow down',
-    });
     logWarn.mockRestore();
+  });
+
+  it('maps 429 (throttler) to TOO_MANY_REQUESTS', () => {
+    const { status, body } = run(new HttpException('slow down', 429));
+    expect(status).toBe(429);
+    expect(body).toEqual({ statusCode: 429, code: 'TOO_MANY_REQUESTS', message: 'slow down' });
   });
 
   it('hides unknown error messages behind 500 INTERNAL', () => {
