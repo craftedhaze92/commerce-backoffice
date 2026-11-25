@@ -90,12 +90,12 @@ export function refreshOnce(): Promise<boolean> {
 }
 
 /**
- * 주의: ReadableStream 같은 일회성 body는 401 재시도 때 다시 보낼 수 없다(string/JSON body만 안전).
- * 또한 refresh가 이미 끝난 뒤에 도착한 401은 refresh를 한 번 더 일으킨다(토큰이 한 번 더 회전할 뿐 무해).
- *
  * `http`와 `httpBlob`이 공유하는 전송 코어. 전송하고, 401이면(인증 경로 제외)
  * refreshOnce() 후 딱 한 번 재시도하며, 비정상 응답은 ApiError로 던진다.
  * refresh가 실패하면 원래 401 ApiError를 던진다(세션 만료 핸들러는 refresh 실패당 한 번만 호출된다).
+ *
+ * 주의: ReadableStream 같은 일회성 body는 401 재시도 때 다시 보낼 수 없다(string/JSON body만 안전).
+ * 또한 refresh가 이미 끝난 뒤에 도착한 401은 refresh를 한 번 더 일으킨다(토큰이 한 번 더 회전할 뿐 무해).
  */
 async function request(path: string, init?: HttpInit): Promise<Response> {
   let res = await send(path, init);

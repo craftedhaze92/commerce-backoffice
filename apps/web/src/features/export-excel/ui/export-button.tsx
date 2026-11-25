@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import type { ExportTooLargeDetails } from '@bo/contracts';
+import { EXPORT_LIMITS, type ExportTooLargeDetails } from '@bo/contracts';
 import { Can } from '@/entities/session';
 import { ApiError, httpBlob } from '@/shared/api';
 import { saveBlob } from '@/shared/lib/save-blob';
@@ -21,7 +21,7 @@ function errorMessage(error: Error): string {
   if (error instanceof ApiError && error.code === 'EXPORT_TOO_LARGE') {
     const { total, maxRows } = (error.details ?? {}) as Partial<ExportTooLargeDetails>;
     if (typeof total === 'number') {
-      return `${total.toLocaleString('ko-KR')}건은 한 번에 내려받을 수 없습니다. ${(maxRows ?? 10_000).toLocaleString('ko-KR')}건 이하가 되도록 필터를 좁혀 주세요.`;
+      return `${total.toLocaleString('ko-KR')}건은 한 번에 내려받을 수 없습니다. ${(maxRows ?? EXPORT_LIMITS.maxRows).toLocaleString('ko-KR')}건 이하가 되도록 필터를 좁혀 주세요.`;
     }
   }
   return FAILURE_MESSAGE;

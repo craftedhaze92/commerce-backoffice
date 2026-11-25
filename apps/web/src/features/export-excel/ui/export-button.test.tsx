@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
 import { renderWithQuery } from '@/shared/testing/render-with-query';
+import { REVOKE_DELAY_MS } from '@/shared/lib/save-blob';
 import { server } from '@/shared/testing/msw-server';
 import { ExportButton } from './export-button';
 
@@ -15,6 +16,8 @@ const original = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
 let clicks: string[];
 
 beforeEach(() => {
+  // saveBlob은 object URL을 지연 해제한다. 가짜 타이머로 잡아 두고 테스트가 끝나면 버린다.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
   URL.createObjectURL = vi.fn(() => 'blob:mock');
   URL.revokeObjectURL = vi.fn();
   clicks = [];
@@ -26,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   URL.createObjectURL = original.create;
   URL.revokeObjectURL = original.revoke;
   vi.restoreAllMocks();
@@ -68,7 +72,8 @@ describe('ExportButton', () => {
     await userEvent.click(await screen.findByRole('button', { name: '엑셀 다운로드' }));
     await waitFor(() => expect(clicks).toEqual(['주문목록_20261121.xlsx']));
     expect(search).toBe('?status=CONFIRMED');
-    expect(URL.revokeObjectURL).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(REVOKE_DELAY_MS);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
   });
 
   it('falls back to export.xlsx without Content-Disposition', async () => {

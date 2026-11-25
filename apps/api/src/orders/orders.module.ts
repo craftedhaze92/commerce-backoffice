@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CLOCK, type Clock } from '../common/clock.js';
+import { CLOCK, systemClock } from '../common/clock.js';
 import { InventoryModule } from '../inventory/inventory.module.js';
 import { DevOnlyGuard } from './dev-only.guard.js';
 import { DevOrdersController } from './dev-orders.controller.js';
@@ -12,8 +12,6 @@ import { OrderStatusHistory } from './order-status-history.entity.js';
 import { Order } from './order.entity.js';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
-
-const systemClock: Clock = () => new Date();
 
 @Module({
   imports: [

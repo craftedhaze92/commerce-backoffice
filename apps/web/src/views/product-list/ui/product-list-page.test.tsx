@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
 import { sessionKeys } from '@/entities/session';
 import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
+import { REVOKE_DELAY_MS } from '@/shared/lib/save-blob';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { ProductListPage } from './product-list-page';
@@ -47,8 +48,9 @@ function recordExportRequests(resource: 'products'): string[] {
 /** jsdom에는 Blob URL과 앵커 다운로드가 없어 가로챈다. */
 function stubDownload() {
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  return { revoke, click };
 }
 
 beforeAll(() => {
@@ -92,15 +94,24 @@ describe('ProductListPage', () => {
   });
 
   it('with ?q=크림&lowStock=true&sort=price:asc, 엑셀 다운로드 requests /api/v1/products/export with the same filters', async () => {
-    stubDownload();
-    setMockSearch('q=크림&lowStock=true&sort=price:asc');
-    const listed = recordProductRequests();
-    const exported = recordExportRequests('products');
-    renderWithQuery(<ProductListPage />);
-    await userEvent.click(await screen.findByRole('button', { name: '엑셀 다운로드' }));
-    await waitFor(() => expect(exported).toHaveLength(1));
-    expect(listed[0]).not.toBe('');
-    expect(exported[0]).toBe(listed[0]);
+    // saveBlob은 object URL을 지연 해제한다. 가짜 타이머로 그 타이머까지 끝내고 나온다.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { revoke, click } = stubDownload();
+      setMockSearch('q=크림&lowStock=true&sort=price:asc');
+      const listed = recordProductRequests();
+      const exported = recordExportRequests('products');
+      renderWithQuery(<ProductListPage />);
+      await userEvent.click(await screen.findByRole('button', { name: '엑셀 다운로드' }));
+      await waitFor(() => expect(exported).toHaveLength(1));
+      expect(listed[0]).not.toBe('');
+      expect(exported[0]).toBe(listed[0]);
+      await waitFor(() => expect(click).toHaveBeenCalled());
+      await vi.advanceTimersByTimeAsync(REVOKE_DELAY_MS);
+      expect(revoke).toHaveBeenCalledWith('blob:mock');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('viewer does not see 엑셀 다운로드', async () => {
