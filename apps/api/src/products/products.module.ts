@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CLOCK, systemClock } from '../common/clock.js';
 import { InventoryModule } from '../inventory/inventory.module.js';
 import { Inventory } from './inventory.entity.js';
+import { ImageCleanupService } from './images/image-cleanup.service.js';
 import { ProductImagesController } from './images/product-images.controller.js';
 import { ProductImagesService } from './images/product-images.service.js';
 import { ProductImage } from './product-image.entity.js';
@@ -13,6 +14,11 @@ import { ProductsService } from './products.service.js';
 @Module({
   imports: [TypeOrmModule.forFeature([Product, Inventory, ProductImage]), InventoryModule],
   controllers: [ProductsController, ProductImagesController],
-  providers: [ProductsService, ProductImagesService, { provide: CLOCK, useValue: systemClock }],
+  providers: [
+    ProductsService,
+    ProductImagesService,
+    ImageCleanupService,
+    { provide: CLOCK, useValue: systemClock },
+  ],
 })
 export class ProductsModule {}
