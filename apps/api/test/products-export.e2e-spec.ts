@@ -9,7 +9,7 @@ import {
 } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
 import { getXlsx } from './helpers/xlsx.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { Category } from '../src/categories/category.entity.js';
 import { CLOCK } from '../src/common/clock.js';
 import { Inventory } from '../src/products/inventory.entity.js';

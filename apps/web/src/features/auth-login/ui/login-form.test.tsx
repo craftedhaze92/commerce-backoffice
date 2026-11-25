@@ -44,6 +44,28 @@ describe('LoginForm', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
+  it('shows the too-many-attempts message on 429 TOO_MANY_REQUESTS', async () => {
+    server.use(
+      http.post('/api/v1/auth/login', () =>
+        HttpResponse.json(
+          { statusCode: 429, code: 'TOO_MANY_REQUESTS', message: 'Too many login attempts' },
+          { status: 429, headers: { 'Retry-After': '60' } },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    renderWithQuery(<LoginForm onSuccess={onSuccess} />);
+    await user.type(screen.getByLabelText('이메일'), 'a@b.com');
+    await user.type(screen.getByLabelText('비밀번호'), 'x');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+    expect(
+      await screen.findByText('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('로그인에 실패했습니다. 잠시 후 다시 시도해주세요')).toBeNull();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
   it('shows generic message on other errors', async () => {
     server.use(
       http.post('/api/v1/auth/login', () =>

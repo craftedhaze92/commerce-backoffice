@@ -24,6 +24,16 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
+    /** 공개 데모 배포용. true면 시드 데모 계정의 역할·활성 상태 변경을 막는다. */
+    DEMO_MODE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    /** Express `trust proxy` 홉 수. 0이면 설정하지 않아 X-Forwarded-For를 믿지 않는다. */
+    TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+    /** POST /auth/login 시도 제한: (IP, 정규화한 이메일)마다 TTL 동안 허용하는 횟수. */
+    LOGIN_THROTTLE_LIMIT: z.coerce.number().int().positive().default(10),
+    LOGIN_THROTTLE_TTL_SEC: z.coerce.number().int().positive().default(600),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.JWT_SECRET === EXAMPLE_JWT_SECRET) {

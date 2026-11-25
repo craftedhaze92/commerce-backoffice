@@ -59,6 +59,7 @@ export const orderDetailFixture: OrderDetail = {
       quantity: 1,
       unitPrice: 11_000,
       subtotal: 11_000,
+      productDeleted: false,
     },
     {
       id: uuid(2, 'oi00'),
@@ -68,6 +69,7 @@ export const orderDetailFixture: OrderDetail = {
       quantity: 2,
       unitPrice: 10_000,
       subtotal: 20_000,
+      productDeleted: false,
     },
   ],
   history: [
@@ -97,6 +99,7 @@ function buildDetail(item: OrderListItem): OrderDetail {
         quantity: 2,
         unitPrice,
         subtotal: item.totalAmount,
+        productDeleted: false,
       },
     ],
     history: [

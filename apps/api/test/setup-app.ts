@@ -64,6 +64,8 @@ export async function createTestApp(
       DATABASE_URL: baseUrl(dbName),
       JWT_SECRET: 'test-secret-test-secret-test-secret-0123',
       WEB_ORIGIN: 'http://localhost:3000',
+      // Suites log in far more than 10 times; the throttle suite lowers this explicitly.
+      LOGIN_THROTTLE_LIMIT: '1000',
       ...options.env,
     };
     for (const k of Object.keys(overrides)) {

@@ -27,6 +27,23 @@ const ID = orderDetailFixture.id;
 describe('OrderDetailPage', () => {
   beforeEach(() => useRole(Role.MANAGER));
 
+  it('deleted product item renders name without link and 삭제된 상품 badge', async () => {
+    const [live, gone] = orderDetailFixture.items;
+    server.use(
+      http.get(`/api/v1/orders/${ID}`, () =>
+        HttpResponse.json({
+          ...orderDetailFixture,
+          items: [live, { ...gone, productDeleted: true }],
+        }),
+      ),
+    );
+    renderWithQuery(<OrderDetailPage id={ID} />);
+    await screen.findByText(gone.productName);
+    expect(screen.queryByRole('link', { name: gone.productName })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: live.productName })).toBeInTheDocument();
+    expect(screen.getAllByText('삭제된 상품')).toHaveLength(1);
+  });
+
   it('manager sees the action buttons once the session is loaded (positive control)', async () => {
     const client = createTestQueryClient();
     renderWithQuery(<OrderDetailPage id={ID} />, { client });

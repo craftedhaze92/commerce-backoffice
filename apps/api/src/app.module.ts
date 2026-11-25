@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module.js';
 @Module({
   imports: [
     EnvModule,
+    ScheduleModule.forRoot(),
     StorageModule,
     UsersModule,
     AuthModule,

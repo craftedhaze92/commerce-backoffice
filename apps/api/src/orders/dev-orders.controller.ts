@@ -1,5 +1,5 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiExcludeController } from '@nestjs/swagger';
 import { Role, type OrderListItem } from '@bo/contracts';
 import { CurrentUser, Roles, type AuthUser } from '../common/decorators.js';
 import { RandomOrdersDto } from './dto/random-orders.dto.js';
@@ -8,6 +8,7 @@ import { DevOrdersService } from './dev-orders.service.js';
 
 @ApiCookieAuth('bo_at')
 @UseGuards(DevOnlyGuard)
+@ApiExcludeController()
 @Controller('dev/orders')
 export class DevOrdersController {
   constructor(private readonly dev: DevOrdersService) {}

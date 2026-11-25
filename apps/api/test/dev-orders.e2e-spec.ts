@@ -2,7 +2,7 @@ import request from 'supertest';
 import { OrderStatus, ProductStatus, Role, type OrderListItem } from '@bo/contracts';
 import { QueryFailedError } from 'typeorm';
 import { createTestApp, type TestApp } from './setup-app.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { Category } from '../src/categories/category.entity.js';
 import { Inventory } from '../src/products/inventory.entity.js';
 import { Product } from '../src/products/product.entity.js';

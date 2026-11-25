@@ -1,11 +1,14 @@
 import { Controller, HttpCode, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiCookieAuth } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../../common/api-error.schema.js';
 import { PRODUCT_LIMITS, Role, type ProductImage } from '@bo/contracts';
 import { Roles } from '../../common/decorators.js';
 import { ProductImagesService } from './product-images.service.js';
 
 @ApiCookieAuth('bo_at')
+@ApiTags('product-images')
+@ApiErrors(400, 401, 403)
 @Controller('products/images')
 export class ProductImagesController {
   constructor(private readonly service: ProductImagesService) {}

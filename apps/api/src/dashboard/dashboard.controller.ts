@@ -1,11 +1,14 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiCookieAuth } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import { Role, type CategorySales, type DashboardSummary, type SalesTrend } from '@bo/contracts';
 import { Roles } from '../common/decorators.js';
 import { PeriodQuery } from './dto/period.query.js';
 import { DashboardService } from './dashboard.service.js';
 
 @ApiCookieAuth('bo_at')
+@ApiTags('dashboard')
+@ApiErrors()
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}

@@ -12,7 +12,8 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { ApiCookieAuth } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOkResponse, ApiProduces, ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import {
   Role,
   type InventoryHistoryItem,
@@ -28,12 +29,16 @@ import { ListProductsQuery } from './dto/list-products.query.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ProductsService } from './products.service.js';
 
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 @ApiCookieAuth('bo_at')
+@ApiErrors()
 @Controller('products')
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
   @Roles(Role.VIEWER)
+  @ApiTags('products')
   @Get()
   list(@Query() q: ListProductsQuery): Promise<Paginated<ProductListItem>> {
     return this.products.list(q);
@@ -41,24 +46,33 @@ export class ProductsController {
 
   /** Declared before ':id' so "export" is not parsed as an id. */
   @Roles(Role.MANAGER)
+  @ApiTags('products')
+  @ApiProduces(XLSX)
+  @ApiOkResponse({
+    description: 'xlsx file',
+    content: { [XLSX]: { schema: { type: 'string', format: 'binary' } } },
+  })
   @Get('export')
   export(@Query() q: ListProductsQuery, @Res() res: Response): Promise<void> {
     return this.products.export(q, res);
   }
 
   @Roles(Role.VIEWER)
+  @ApiTags('products')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string): Promise<ProductDetail> {
     return this.products.get(id);
   }
 
   @Roles(Role.MANAGER)
+  @ApiTags('products')
   @Post()
   create(@Body() dto: CreateProductDto): Promise<ProductDetail> {
     return this.products.create(dto);
   }
 
   @Roles(Role.MANAGER)
+  @ApiTags('products')
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -68,6 +82,7 @@ export class ProductsController {
   }
 
   @Roles(Role.MANAGER)
+  @ApiTags('inventory')
   @Patch(':id/inventory')
   adjustInventory(
     @Param('id', ParseUUIDPipe) id: string,
@@ -78,6 +93,7 @@ export class ProductsController {
   }
 
   @Roles(Role.VIEWER)
+  @ApiTags('inventory')
   @Get(':id/inventory-history')
   inventoryHistory(
     @Param('id', ParseUUIDPipe) id: string,
@@ -87,6 +103,7 @@ export class ProductsController {
   }
 
   @Roles(Role.MANAGER)
+  @ApiTags('products')
   @Delete(':id')
   @HttpCode(204)
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

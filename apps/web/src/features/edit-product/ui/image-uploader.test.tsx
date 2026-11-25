@@ -129,7 +129,7 @@ describe('ImageUploader', () => {
     await waitFor(() => expect(state()).toEqual([['img-ok.png', true, 0]]));
   });
 
-  it('shows the server validation message for a 400 on that file', async () => {
+  it('shows fixed Korean copy (not server text) for a 400 on that file', async () => {
     server.use(
       http.post('/api/v1/products/images', () =>
         HttpResponse.json(
@@ -137,7 +137,7 @@ describe('ImageUploader', () => {
             statusCode: 400,
             code: 'VALIDATION_FAILED',
             message: 'x',
-            details: [{ field: 'file', messages: ['이미지 파일이 아닙니다'] }],
+            details: [{ field: 'file', messages: ['file must be an image'] }],
           },
           { status: 400 },
         ),
@@ -146,7 +146,10 @@ describe('ImageUploader', () => {
     const user = userEvent.setup();
     renderWithQuery(<Harness />);
     await user.upload(screen.getByLabelText('파일 선택'), [png('fake.png')]);
-    expect(await screen.findByText('fake.png: 이미지 파일이 아닙니다')).toBeInTheDocument();
+    expect(
+      await screen.findByText('fake.png: 지원하지 않는 형식이거나 너무 큰 이미지입니다'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/file must be an image/)).not.toBeInTheDocument();
     expect(state()).toEqual([]);
   });
 

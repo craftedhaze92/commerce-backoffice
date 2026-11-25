@@ -1,7 +1,7 @@
 import request, { type Response } from 'supertest';
 import { Role } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { RefreshTokenService } from '../src/auth/refresh-token.service.js';
 import { RefreshToken } from '../src/auth/refresh-token.entity.js';
 import { setupSwagger } from '../src/swagger.js';

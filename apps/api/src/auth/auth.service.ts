@@ -6,7 +6,7 @@ import { ENV } from '../config/env.module.js';
 import type { Env } from '../config/env.js';
 import type { User } from '../users/user.entity.js';
 import { UsersService } from '../users/users.service.js';
-import { hashPassword, verifyPassword } from './password.js';
+import { hashPassword, verifyPassword } from '../common/password.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 
 /** Verified against when the email is unknown, so timing matches a real check. */

@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Role } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { Category } from '../src/categories/category.entity.js';
 import { User } from '../src/users/user.entity.js';
 

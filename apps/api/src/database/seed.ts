@@ -1,6 +1,6 @@
 import { OrderStatus, ProductStatus, Role } from '@bo/contracts';
 import { DataSource, In, type EntityManager } from 'typeorm';
-import { hashPassword } from '../auth/password.js';
+import { hashPassword } from '../common/password.js';
 import { validateEnv } from '../config/env.js';
 import { Category } from '../categories/category.entity.js';
 import { Inventory } from '../products/inventory.entity.js';

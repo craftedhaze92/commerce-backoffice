@@ -1,4 +1,6 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiErrors } from '../common/api-error.schema.js';
 import type { Request, Response } from 'express';
 import type { MeResponse } from '@bo/contracts';
 import { ENV } from '../config/env.module.js';
@@ -8,8 +10,11 @@ import { AuthService, toMe } from './auth.service.js';
 import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from './auth-cookies.js';
 import { type AuthUser, CurrentUser, Public } from '../common/decorators.js';
 import { LoginDto } from './dto/login.dto.js';
+import { LoginThrottleGuard } from './login-throttle.guard.js';
 import { AppException } from '../common/app-exception.js';
 
+@ApiTags('auth')
+@ApiErrors(401)
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -21,6 +26,8 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @UseGuards(LoginThrottleGuard)
+  @ApiErrors(400, 429)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,

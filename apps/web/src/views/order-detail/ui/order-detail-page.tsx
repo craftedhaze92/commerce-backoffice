@@ -7,6 +7,7 @@ import { OrderTimeline } from '@/widgets/order-timeline';
 import { ApiError } from '@/shared/api';
 import { kst } from '@/shared/lib/dayjs';
 import { formatWon } from '@/shared/lib/format-won';
+import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import {
@@ -79,9 +80,18 @@ export function OrderDetailPage({ id }: { id: string }) {
           {detail.items.map((item) => (
             <TableRow key={item.id}>
               <TableCell>
-                <Link href={`/products/${item.productId}`} className="hover:underline">
-                  {item.productName}
-                </Link>
+                {item.productDeleted ? (
+                  <span className="inline-flex items-center gap-2">
+                    {item.productName}
+                    <Badge variant="secondary" className="text-muted-foreground">
+                      삭제된 상품
+                    </Badge>
+                  </span>
+                ) : (
+                  <Link href={`/products/${item.productId}`} className="hover:underline">
+                    {item.productName}
+                  </Link>
+                )}
               </TableCell>
               <TableCell>{item.sku}</TableCell>
               <TableCell className="text-right tabular-nums">{formatWon(item.unitPrice)}</TableCell>
