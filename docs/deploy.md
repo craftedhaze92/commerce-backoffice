@@ -65,14 +65,14 @@ DATABASE_URL='<Neon 접속 문자열>' pnpm --filter api db:seed
 2. **Instance Type**은 **Free**를 고른다.
 3. 아래처럼 설정한다. Root Directory는 비워 둔다(저장소 루트). 워크스페이스 전체를 설치해야 `@bo/contracts`를 빌드할 수 있기 때문이다.
 
-| 항목              | 값                                                                                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Language          | Node                                                                                                                                     |
-| Build Command     | `corepack enable && NODE_ENV=development pnpm install --frozen-lockfile && pnpm --filter @bo/contracts build && pnpm --filter api build` |
-| Start Command     | `cd apps/api && node ./node_modules/typeorm/cli.js migration:run -d dist/database/cli-data-source.js && node dist/main.js`               |
-| Health Check Path | `/api/v1/health`                                                                                                                         |
+| 항목              | 값                                                                                                                                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language          | Node                                                                                                                                                                                         |
+| Build Command     | `export COREPACK_ENABLE_DOWNLOAD_PROMPT=0 && NODE_ENV=development corepack pnpm install --frozen-lockfile && corepack pnpm --filter @bo/contracts build && corepack pnpm --filter api build` |
+| Start Command     | `cd apps/api && node ./node_modules/typeorm/cli.js migration:run -d dist/database/cli-data-source.js && node dist/main.js`                                                                   |
+| Health Check Path | `/api/v1/health`                                                                                                                                                                             |
 
-- `corepack enable`은 루트 `package.json`의 `packageManager`(pnpm 10.29.1)를 쓰게 한다. 빌드 로그에서 pnpm 버전을 확인한다.
+- `corepack pnpm`은 루트 `package.json`의 `packageManager`(pnpm 10.29.1)를 받아 실행한다. Render 빌드 환경은 `/usr/bin`이 읽기 전용이라 `corepack enable`이 `EROFS: read-only file system` 오류로 실패하므로 쓰지 않는다. `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`은 pnpm을 내려받을 때 확인 질문을 끈다.
 - 설치 단계의 `NODE_ENV=development`는 devDependencies(Nest CLI, TypeScript)를 설치하기 위해서다. 서비스 변수의 `NODE_ENV=production`이 설치에 적용되면 빌드 도구가 빠져 빌드가 실패한다.
 - 시작 명령은 마이그레이션을 먼저 적용한 뒤 서버를 띄운다. 적용할 마이그레이션이 없으면 바로 넘어간다. 시작 시점에 `pnpm`을 부르지 않고 `node`로 직접 실행한다.
 - `PORT`는 Render가 넣어 준다. 직접 지정하지 않는다.
