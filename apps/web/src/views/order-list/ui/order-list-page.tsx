@@ -1,6 +1,7 @@
 'use client';
 
-import { useOrders } from '@/entities/order';
+import { toOrderQueryString, useOrders } from '@/entities/order';
+import { ExportButton } from '@/features/export-excel';
 import { GenerateOrdersButton } from '@/features/generate-orders';
 import { ORDER_PAGE_SIZES, OrderFilterBar, useOrderListParams } from '@/features/order-filter';
 import { OrderTable } from '@/widgets/order-table';
@@ -23,7 +24,10 @@ export function OrderListPage() {
             </span>
           )}
         </div>
-        <GenerateOrdersButton />
+        <div className="flex items-center gap-2">
+          <ExportButton resource="orders" query={toOrderQueryString(params)} />
+          <GenerateOrdersButton />
+        </div>
       </header>
       <OrderFilterBar params={params} onChange={setParams} />
       <OrderTable

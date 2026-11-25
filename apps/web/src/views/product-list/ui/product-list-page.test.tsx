@@ -1,9 +1,10 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
-import { renderWithQuery } from '@/shared/testing/render-with-query';
+import { sessionKeys } from '@/entities/session';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-with-query';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { ProductListPage } from './product-list-page';
@@ -31,6 +32,25 @@ function recordProductRequests(): string[] {
   return seen;
 }
 
+/** 엑셀 내려받기 요청의 쿼리 문자열을 기록한다. */
+function recordExportRequests(resource: 'products'): string[] {
+  const seen: string[] = [];
+  server.use(
+    http.get(`/api/v1/${resource}/export`, ({ request }) => {
+      seen.push(new URL(request.url).search);
+      return undefined;
+    }),
+  );
+  return seen;
+}
+
+/** jsdom에는 Blob URL과 앵커 다운로드가 없어 가로챈다. */
+function stubDownload() {
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+}
+
 beforeAll(() => {
   // jsdom에는 Radix Select가 쓰는 포인터 캡처·scrollIntoView가 없다
   Element.prototype.hasPointerCapture ??= () => false;
@@ -40,6 +60,10 @@ beforeAll(() => {
 });
 
 describe('ProductListPage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     setMockSearch('');
     useRole(Role.MANAGER);
@@ -65,6 +89,30 @@ describe('ProductListPage', () => {
     renderWithQuery(<ProductListPage />);
     const link = await screen.findByRole('link', { name: '상품 등록' });
     expect(link).toHaveAttribute('href', '/products/new');
+  });
+
+  it('with ?q=크림&lowStock=true&sort=price:asc, 엑셀 다운로드 requests /api/v1/products/export with the same filters', async () => {
+    stubDownload();
+    setMockSearch('q=크림&lowStock=true&sort=price:asc');
+    const listed = recordProductRequests();
+    const exported = recordExportRequests('products');
+    renderWithQuery(<ProductListPage />);
+    await userEvent.click(await screen.findByRole('button', { name: '엑셀 다운로드' }));
+    await waitFor(() => expect(exported).toHaveLength(1));
+    expect(listed[0]).not.toBe('');
+    expect(exported[0]).toBe(listed[0]);
+  });
+
+  it('viewer does not see 엑셀 다운로드', async () => {
+    useRole(Role.VIEWER);
+    const client = createTestQueryClient();
+    renderWithQuery(<ProductListPage />, { client });
+    await screen.findByText('테스트 상품 1');
+    await waitFor(() =>
+      expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: Role.VIEWER }),
+    );
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.queryByRole('button', { name: '엑셀 다운로드' })).not.toBeInTheDocument();
   });
 
   it('viewer does not see 상품 등록', async () => {

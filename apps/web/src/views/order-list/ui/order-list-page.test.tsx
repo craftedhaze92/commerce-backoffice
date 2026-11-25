@@ -34,6 +34,25 @@ function recordOrderRequests(): string[] {
   return seen;
 }
 
+/** 엑셀 내려받기 요청의 쿼리 문자열을 기록한다. */
+function recordExportRequests(resource: 'orders'): string[] {
+  const seen: string[] = [];
+  server.use(
+    http.get(`/api/v1/${resource}/export`, ({ request }) => {
+      seen.push(new URL(request.url).search);
+      return undefined;
+    }),
+  );
+  return seen;
+}
+
+/** jsdom에는 Blob URL과 앵커 다운로드가 없어 가로챈다. */
+function stubDownload() {
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+}
+
 beforeAll(() => {
   // jsdom에는 Radix Select가 쓰는 포인터 캡처·scrollIntoView가 없다
   Element.prototype.hasPointerCapture ??= () => false;
@@ -50,6 +69,7 @@ describe('OrderListPage', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it('shows title and total once loaded', async () => {
@@ -185,6 +205,30 @@ describe('OrderListPage', () => {
     expect(await screen.findByText('ORD-KST-1')).toBeInTheDocument();
     expect(await screen.findByText('총 1건')).toBeInTheDocument();
     expect(screen.queryByText('ORD-KST-2')).not.toBeInTheDocument();
+  });
+
+  it('with ?status=CONFIRMED&from=2026-11-01&to=2026-11-20, 엑셀 다운로드 requests /api/v1/orders/export with the same filters', async () => {
+    stubDownload();
+    setMockSearch('status=CONFIRMED&from=2026-11-01&to=2026-11-20');
+    const listed = recordOrderRequests();
+    const exported = recordExportRequests('orders');
+    renderWithQuery(<OrderListPage />);
+    await userEvent.click(await screen.findByRole('button', { name: '엑셀 다운로드' }));
+    await waitFor(() => expect(exported).toHaveLength(1));
+    expect(listed[0]).toBe('?status=CONFIRMED&from=2026-11-01&to=2026-11-20');
+    expect(exported[0]).toBe(listed[0]);
+  });
+
+  it('viewer: no 엑셀 다운로드 on either page', async () => {
+    useRole(Role.VIEWER);
+    const client = createTestQueryClient();
+    renderWithQuery(<OrderListPage />, { client });
+    await screen.findByText('총 30건');
+    await waitFor(() =>
+      expect(client.getQueryData(sessionKeys.me)).toMatchObject({ role: Role.VIEWER }),
+    );
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.queryByRole('button', { name: '엑셀 다운로드' })).not.toBeInTheDocument();
   });
 
   describe('GenerateOrdersButton', () => {
