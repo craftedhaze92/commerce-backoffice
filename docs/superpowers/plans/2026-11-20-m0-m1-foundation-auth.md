@@ -30,7 +30,7 @@
 - 프론트는 물타기의 FSD 규칙(`app → views → widgets → features → entities → shared`, 슬라이스는 `index.ts`로만 노출)과 네이밍 규칙을 따른다. 위반을 `eslint-disable`로 우회하지 않는다.
 - 커밋: Conventional Commits, `<type>:` 뒤 제목과 본문은 한글, 제목 끝에 마침표 없음.
 - 완료 보고 전: 루트에서 `pnpm lint && pnpm typecheck && pnpm test && pnpm build`가 통과해야 한다.
-- 물타기 원본 경로: `/Users/dohyun/문서/GitHub/mool-ta-gi` (이하 `$MTG`).
+- 물타기 원본 경로: 로컬에 클론한 물타기 저장소 (이하 `$MTG`).
 
 ## Review Focus
 
