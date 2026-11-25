@@ -10,7 +10,7 @@ import {
 } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
 import { getXlsx } from './helpers/xlsx.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { CLOCK } from '../src/common/clock.js';
 import { User } from '../src/users/user.entity.js';
 

@@ -7,7 +7,7 @@ import {
   type Paginated,
 } from '@bo/contracts';
 import { createTestApp, type TestApp } from './setup-app.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '../src/common/password.js';
 import { User } from '../src/users/user.entity.js';
 
 const PW = 'demo1234!';
