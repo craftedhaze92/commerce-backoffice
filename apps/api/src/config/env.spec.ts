@@ -17,6 +17,14 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...valid, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 
+  it('rejects the .env.example JWT_SECRET placeholder in production', () => {
+    const placeholder = 'change-me-to-a-random-string-of-32-chars-or-more';
+    expect(() =>
+      validateEnv({ ...valid, NODE_ENV: 'production', JWT_SECRET: placeholder }),
+    ).toThrow(/JWT_SECRET/);
+    expect(validateEnv({ ...valid, JWT_SECRET: placeholder }).JWT_SECRET).toBe(placeholder);
+  });
+
   it('names every invalid key', () => {
     expect(() => validateEnv({})).toThrow(/DATABASE_URL[\s\S]*JWT_SECRET[\s\S]*WEB_ORIGIN/);
   });
