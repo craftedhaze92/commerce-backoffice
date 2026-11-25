@@ -146,7 +146,8 @@ pnpm dev
 - `DEMO_MODE=true`이면 사용자 수가 20명(`DEMO_MAX_USERS`)에 이르면 사용자 추가가 403 `DEMO_PROTECTED`로 막힌다.
 - 로그인 시도 제한이 켜져 있다. 프록시 뒤에서는 `TRUST_PROXY`로 신뢰할 홉 수를 맞춰야 한다.
 - 데모 비밀번호는 위 [데모 계정](#데모-계정)과 같다.
-- 배포 절차(Cloudflare R2, Railway, Vercel)와 `TRUST_PROXY` 확인 방법은 [docs/deploy.md](docs/deploy.md)에 있다.
+- 무료 플랜(Vercel Hobby, Render Free, Neon Free)으로 배포한다. 기본 구성에서는 상품 이미지 업로드를 쓰지 않고, api가 15분간 요청이 없으면 잠들어 첫 접속이 느리다.
+- 배포 절차, 선택 사항인 이미지 저장소(R2) 연결, `TRUST_PROXY` 확인 방법은 [docs/deploy.md](docs/deploy.md)에 있다.
 
 ## 스크린샷
 

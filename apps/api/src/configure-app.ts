@@ -16,7 +16,7 @@ function flatten(errors: ValidationError[], parent = ''): { field: string; messa
 
 /** Shared by main.ts and the e2e harness. Guards are registered via APP_GUARD, not here. */
 export function configureApp(app: INestApplication, env: Env): void {
-  // Behind N reverse proxies (Railway, ...), req.ip is the N-th address from the right of
+  // Behind N reverse proxies (Vercel, Render, ...), req.ip is the N-th address from the right of
   // X-Forwarded-For. 0 keeps Express's default: the header is ignored, so it cannot be spoofed.
   if (env.TRUST_PROXY > 0) (app as NestExpressApplication).set('trust proxy', env.TRUST_PROXY);
   app.setGlobalPrefix(API_PREFIX);
