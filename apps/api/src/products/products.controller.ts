@@ -9,7 +9,9 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiCookieAuth } from '@nestjs/swagger';
 import {
   Role,
@@ -35,6 +37,13 @@ export class ProductsController {
   @Get()
   list(@Query() q: ListProductsQuery): Promise<Paginated<ProductListItem>> {
     return this.products.list(q);
+  }
+
+  /** Declared before ':id' so "export" is not parsed as an id. */
+  @Roles(Role.MANAGER)
+  @Get('export')
+  export(@Query() q: ListProductsQuery, @Res() res: Response): Promise<void> {
+    return this.products.export(q, res);
   }
 
   @Roles(Role.VIEWER)

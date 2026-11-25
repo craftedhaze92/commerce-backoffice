@@ -5,6 +5,7 @@ import { ApiError } from './api-error';
 import {
   defaultSessionExpired,
   http as httpClient,
+  httpBlob,
   refreshOnce,
   setSessionExpiredHandler,
 } from './http-client';
@@ -267,5 +268,68 @@ describe('default session-expired handler', () => {
     const assign = stubLocation('/');
     defaultSessionExpired();
     expect(String(assign.mock.calls[0][0])).toBe('http://localhost:3000/login?reason=expired');
+  });
+});
+
+describe('httpBlob', () => {
+  const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  it('returns blob and content-disposition; sends X-Requested-With and credentials', async () => {
+    let header: string | null = null;
+    let credentials: string | undefined;
+    server.use(
+      mswHttp.get('/api/v1/export', ({ request }) => {
+        header = request.headers.get('x-requested-with');
+        credentials = request.credentials;
+        return new HttpResponse('abc', {
+          headers: { 'Content-Type': XLSX, 'Content-Disposition': 'attachment; filename="a.xlsx"' },
+        });
+      }),
+    );
+    const { blob, contentDisposition } = await httpBlob('/export');
+    expect(blob.size).toBe(3);
+    expect(contentDisposition).toBe('attachment; filename="a.xlsx"');
+    expect(header).toBe('fetch');
+    expect(credentials).toBe('include');
+  });
+
+  it('401 -> one refresh -> retry succeeds', async () => {
+    let refreshCalls = 0;
+    let authed = false;
+    server.use(
+      mswHttp.post('/api/v1/auth/refresh', () => {
+        refreshCalls++;
+        authed = true;
+        return noContent();
+      }),
+      mswHttp.get('/api/v1/export', () =>
+        authed ? new HttpResponse('abc') : HttpResponse.json(UNAUTH, { status: 401 }),
+      ),
+    );
+    const { blob, contentDisposition } = await httpBlob('/export');
+    expect(blob.size).toBe(3);
+    expect(contentDisposition).toBeNull();
+    expect(refreshCalls).toBe(1);
+  });
+
+  it('422 JSON -> ApiError with code EXPORT_TOO_LARGE and details', async () => {
+    server.use(
+      mswHttp.get('/api/v1/export', () =>
+        HttpResponse.json(
+          {
+            statusCode: 422,
+            code: 'EXPORT_TOO_LARGE',
+            message: 'too large',
+            details: { total: 10_001, maxRows: 10_000 },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(httpBlob('/export')).rejects.toMatchObject({
+      status: 422,
+      code: 'EXPORT_TOO_LARGE',
+      details: { total: 10_001, maxRows: 10_000 },
+    });
   });
 });

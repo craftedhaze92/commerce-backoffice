@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CLOCK, systemClock } from '../common/clock.js';
 import { InventoryModule } from '../inventory/inventory.module.js';
 import { DevOnlyGuard } from './dev-only.guard.js';
 import { DevOrdersController } from './dev-orders.controller.js';
@@ -18,6 +19,12 @@ import { OrdersService } from './orders.service.js';
     InventoryModule,
   ],
   controllers: [OrdersController, DevOrdersController],
-  providers: [OrdersService, OrderTransitionsService, DevOrdersService, DevOnlyGuard],
+  providers: [
+    OrdersService,
+    { provide: CLOCK, useValue: systemClock },
+    OrderTransitionsService,
+    DevOrdersService,
+    DevOnlyGuard,
+  ],
 })
 export class OrdersModule {}

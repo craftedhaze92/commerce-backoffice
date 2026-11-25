@@ -1,5 +1,6 @@
-import { Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
 import { ApiCookieAuth } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { Role, type OrderDetail, type OrderListItem, type Paginated } from '@bo/contracts';
 import { CurrentUser, Roles, type AuthUser } from '../common/decorators.js';
 import { ListOrdersQuery } from './dto/list-orders.query.js';
@@ -18,6 +19,13 @@ export class OrdersController {
   @Get()
   list(@Query() q: ListOrdersQuery): Promise<Paginated<OrderListItem>> {
     return this.orders.list(q);
+  }
+
+  /** Declared before ':id' so "export" is not parsed as an id. */
+  @Roles(Role.MANAGER)
+  @Get('export')
+  export(@Query() q: ListOrdersQuery, @Res() res: Response): Promise<void> {
+    return this.orders.export(q, res);
   }
 
   @Roles(Role.VIEWER)

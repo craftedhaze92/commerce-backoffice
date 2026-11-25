@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   InventoryChangeReason,
@@ -9,6 +9,7 @@ import {
   type ProductImageRef,
   type ProductListItem,
 } from '@bo/contracts';
+import type { Response } from 'express';
 import {
   DataSource,
   type EntityManager,
@@ -18,6 +19,8 @@ import {
   type SelectQueryBuilder,
 } from 'typeorm';
 import { AppException } from '../common/app-exception.js';
+import { CLOCK, type Clock } from '../common/clock.js';
+import { streamExport } from '../common/xlsx/stream-export.js';
 import { toPaginated } from '../common/pagination.js';
 import { Category } from '../categories/category.entity.js';
 import { InventoryLedger } from '../inventory/inventory-ledger.js';
@@ -27,6 +30,7 @@ import type { InventoryHistoryQuery } from './dto/inventory-history.query.js';
 import type { ListProductsQuery } from './dto/list-products.query.js';
 import type { UpdateProductDto } from './dto/update-product.dto.js';
 import { Inventory } from './inventory.entity.js';
+import { PRODUCT_EXPORT_COLUMNS } from './product-export.js';
 import { ProductImage } from './product-image.entity.js';
 import { toImage, toListItem, type ProductRow } from './product-mapper.js';
 import { applyProductFilters, buildProductListQuery } from './product-query.js';
@@ -34,18 +38,18 @@ import { Product } from './product.entity.js';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product) private readonly products: Repository<Product>,
     @InjectRepository(ProductImage) private readonly images: Repository<ProductImage>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly ledger: InventoryLedger,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  private baseQuery(): SelectQueryBuilder<Product> {
-    return this.products
-      .createQueryBuilder('p')
-      .innerJoin('p.category', 'c')
-      .innerJoin('p.inventory', 'i');
+  private baseQuery(repo: Repository<Product> = this.products): SelectQueryBuilder<Product> {
+    return repo.createQueryBuilder('p').innerJoin('p.category', 'c').innerJoin('p.inventory', 'i');
   }
 
   /** One query: category name, inventory and the primary image's thumbKey come along as columns. */
@@ -87,6 +91,38 @@ export class ProductsService {
       .limit(q.size)
       .getRawMany<ProductRow>();
     return toPaginated(rows.map(toListItem), total, q.page, q.size);
+  }
+
+  /**
+   * Streams the filtered list (same filters and ordering as list(), page/size ignored) as xlsx.
+   * Count and every batch read share one REPEATABLE READ snapshot, via that transaction's manager.
+   */
+  async export(q: ListProductsQuery, res: Response): Promise<void> {
+    await streamExport({
+      dataSource: this.dataSource,
+      res,
+      logger: this.logger,
+      now: this.clock(),
+      filename: '상품목록',
+      asciiFilename: 'products',
+      sheetName: '상품',
+      columns: PRODUCT_EXPORT_COLUMNS,
+      open: async (manager) => {
+        const products = manager.getRepository(Product);
+        // Same validation order as list(): a bad price range is a 400 even when nothing matches.
+        const total = await applyProductFilters(this.baseQuery(products), q).getCount();
+        const buildBatchQuery = () =>
+          buildProductListQuery(this.selectRow(this.baseQuery(products)), q);
+        buildBatchQuery();
+        return {
+          total,
+          fetchBatch: async (offset, limit) =>
+            (await buildBatchQuery().offset(offset).limit(limit).getRawMany<ProductRow>()).map(
+              toListItem,
+            ),
+        };
+      },
+    });
   }
 
   async get(id: string): Promise<ProductDetail> {

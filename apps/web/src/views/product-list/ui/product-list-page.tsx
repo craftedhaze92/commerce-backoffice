@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { Can } from '@/entities/session';
-import { useProducts } from '@/entities/product';
+import { toProductQueryString, useProducts } from '@/entities/product';
+import { ExportButton } from '@/features/export-excel';
 import {
   PRODUCT_PAGE_SIZES,
   ProductFilterBar,
@@ -30,11 +31,14 @@ export function ProductListPage() {
             </span>
           )}
         </div>
-        <Can permission="product:write">
-          <Link href="/products/new" className={cn(buttonVariants())}>
-            상품 등록
-          </Link>
-        </Can>
+        <div className="flex items-center gap-2">
+          <ExportButton resource="products" query={toProductQueryString(params)} />
+          <Can permission="product:write">
+            <Link href="/products/new" className={cn(buttonVariants())}>
+              상품 등록
+            </Link>
+          </Can>
+        </div>
       </header>
       <ProductFilterBar params={params} onChange={setParams} />
       <ProductTable

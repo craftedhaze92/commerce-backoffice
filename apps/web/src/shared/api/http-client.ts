@@ -90,16 +90,14 @@ export function refreshOnce(): Promise<boolean> {
 }
 
 /**
+ * `http`와 `httpBlob`이 공유하는 전송 코어. 전송하고, 401이면(인증 경로 제외)
+ * refreshOnce() 후 딱 한 번 재시도하며, 비정상 응답은 ApiError로 던진다.
+ * refresh가 실패하면 원래 401 ApiError를 던진다(세션 만료 핸들러는 refresh 실패당 한 번만 호출된다).
+ *
  * 주의: ReadableStream 같은 일회성 body는 401 재시도 때 다시 보낼 수 없다(string/JSON body만 안전).
  * 또한 refresh가 이미 끝난 뒤에 도착한 401은 refresh를 한 번 더 일으킨다(토큰이 한 번 더 회전할 뿐 무해).
- *
- * `/api/v1` 기준 상대 경로로 JSON API를 호출한다.
- * - 2xx: 본문을 JSON으로 파싱해 반환(204면 undefined)
- * - 그 외: ApiError. 본문이 ApiErrorBody가 아니면 code `INTERNAL`
- * - 401: 인증 경로가 아니면 refreshOnce() 후 딱 한 번 재시도한다. refresh가 실패하면
- *   원래 401 ApiError를 던진다(세션 만료 핸들러는 refresh 실패당 한 번만 호출된다).
  */
-export async function http<T = unknown>(path: string, init?: HttpInit): Promise<T> {
+async function request(path: string, init?: HttpInit): Promise<Response> {
   let res = await send(path, init);
 
   if (res.status === 401 && !NO_REFRESH_PATHS.has(path)) {
@@ -109,11 +107,36 @@ export async function http<T = unknown>(path: string, init?: HttpInit): Promise<
   }
 
   if (!res.ok) throw await toApiError(res);
+  return res;
+}
+
+/**
+ * `/api/v1` 기준 상대 경로로 JSON API를 호출한다.
+ * - 2xx: 본문을 JSON으로 파싱해 반환(204면 undefined)
+ * - 그 외: ApiError. 본문이 ApiErrorBody가 아니면 code `INTERNAL`
+ * - 401: 인증 경로가 아니면 refreshOnce() 후 딱 한 번 재시도한다.
+ */
+export async function http<T = unknown>(path: string, init?: HttpInit): Promise<T> {
+  const res = await request(path, init);
   if (res.status === 204) return undefined as T;
   try {
     return (await res.json()) as T;
   } catch {
     // 2xx인데 본문이 비었거나 JSON이 아니면 SyntaxError 대신 ApiError로 정규화한다.
     throw new ApiError(res.status, 'INTERNAL', 'Invalid JSON in successful response');
+  }
+}
+
+/** 파일 다운로드용. `http`와 같은 전송·401 재시도·ApiError 정규화를 쓰고 본문을 Blob으로 돌려준다. */
+export async function httpBlob(
+  path: string,
+  init?: HttpInit,
+): Promise<{ blob: Blob; contentDisposition: string | null }> {
+  const res = await request(path, init);
+  try {
+    return { blob: await res.blob(), contentDisposition: res.headers.get('Content-Disposition') };
+  } catch {
+    // 본문을 끝까지 읽지 못하면(연결이 끊긴 불완전한 파일 등) 성공으로 돌려주지 않는다.
+    throw new ApiError(res.status, 'INTERNAL', 'Failed to read response body');
   }
 }
