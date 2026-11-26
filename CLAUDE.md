@@ -104,7 +104,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build && pnpm 
 app → views → widgets → features → entities → shared   (단방향, eslint-plugin-boundaries로 강제)
 ```
 
-- 역방향 import와 같은 레이어의 슬라이스 간 import는 금지다. 공유가 필요하면 아래 레이어로 내린다.
+- 역방향 import도, 같은 레이어의 슬라이스 간 import도 금지다. 공유가 필요하면 아래 레이어로 내린다.
 - 슬라이스는 `index.ts`로만 노출한다. `shared`만 하위 경로를 직접 import할 수 있다(`@/shared/ui/button`).
 - 경계 위반을 `eslint-disable`로 우회하지 않는다. 구조를 고친다.
 - 세그먼트는 `ui/`, `model/`, `lib/`, `api/` 중 필요한 것만 만든다.
