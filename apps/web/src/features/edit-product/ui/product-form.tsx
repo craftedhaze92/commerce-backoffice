@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import { useId, useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,9 +9,11 @@ import { useCategories } from '@/entities/category';
 import { PRODUCT_STATUS_LABEL } from '@/entities/product';
 import { ApiError } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import { FORM_FIELD, FORM_LABEL } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/shared/lib/utils';
@@ -37,6 +40,21 @@ interface ProductFormProps {
   initial?: ProductDetail;
   readOnly?: boolean;
   onSubmitted?: (detail: ProductDetail) => void;
+  /** 있으면 저장 옆에 취소 버튼을 둔다(모달에서 닫기용). */
+  onCancel?: () => void;
+  /** 취소 버튼 문구. 등록 모달은 "취소", 상세 모달은 "닫기". */
+  cancelLabel?: string;
+  /**
+   * 있으면 취소·저장 버튼을 이 요소(모달의 고정 하단)에 그린다. 본문이 스크롤돼도 버튼은 제자리에 남는다.
+   * 버튼은 DOM상 폼 밖이므로 저장 버튼은 `form` 속성으로 이 폼을 제출한다.
+   */
+  actionsContainer?: Element | null;
+  /**
+   * stack(기본): 입력칸 → 이미지 → 저장을 세로로 쌓는다.
+   * split: 폼을 `display: contents`로 두고 입력칸과 이미지(+저장)를 두 블록으로 나눠,
+   * 부모 그리드가 `data-slot`으로 자리를 정하게 한다(상품 상세 모달의 2열 배치).
+   */
+  layout?: 'stack' | 'split';
 }
 
 function isFieldName(value: unknown): value is FieldName {
@@ -54,7 +72,17 @@ function fieldErrorsFrom(details: unknown): [FieldName, string][] {
   return result;
 }
 
-export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: ProductFormProps) {
+export function ProductForm({
+  mode,
+  initial,
+  readOnly = false,
+  onSubmitted,
+  onCancel,
+  cancelLabel = '취소',
+  actionsContainer,
+  layout = 'stack',
+}: ProductFormProps) {
+  const split = layout === 'split';
   const idPrefix = useId();
   const categories = useCategories();
   const save = useSaveProduct();
@@ -104,6 +132,7 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
         if (variables.mode === 'edit') {
           setBaseline(detail);
           reset(toFormInput(detail));
+          toast('변경 사항을 저장했습니다');
         }
         onSubmitted?.(detail);
       },
@@ -122,120 +151,152 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
     });
   }
 
-  return (
-    <form noValidate className="flex max-w-3xl flex-col gap-5" onSubmit={handleSubmit(onValid)}>
-      {formError && (
-        <p role="alert" className="text-destructive text-sm">
-          {formError}
-        </p>
-      )}
+  const formId = `${idPrefix}-form`;
+  const actionsNode = (
+    <FormActions
+      formId={formId}
+      readOnly={readOnly}
+      uploading={uploading}
+      onCancel={onCancel}
+      cancelLabel={cancelLabel}
+      disabled={save.isPending || uploading || !hasChanges}
+      pending={save.isPending}
+    />
+  );
+  // 하단 자리가 주어지면 그곳에, 아니면 폼 끝에 둔다. 자리가 아직 마운트되지 않았으면 그리지 않는다
+  const portalActions =
+    actionsContainer !== undefined
+      ? actionsContainer && createPortal(actionsNode, actionsContainer)
+      : null;
+  const inlineActions = actionsContainer === undefined ? actionsNode : null;
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={id('sku')} label="SKU" errors={errors} name="sku">
-          <Input
-            {...a11y('sku')}
-            className={cn(FORM_FIELD, isEdit && 'bg-muted')}
-            readOnly={isEdit}
-            disabled={readOnly}
-            autoComplete="off"
-            placeholder="예: TSHIRT-001"
-            {...register('sku')}
-          />
-        </Field>
-        <Field id={id('name')} label="상품명" errors={errors} name="name">
-          <Input
-            {...a11y('name')}
-            className={FORM_FIELD}
-            disabled={readOnly}
-            {...register('name')}
-          />
-        </Field>
-        <Field id={id('categoryId')} label="카테고리" errors={errors} name="categoryId">
-          <Controller
-            control={control}
-            name="categoryId"
-            render={({ field }) => (
-              <Select
-                value={field.value || undefined}
-                onValueChange={field.onChange}
-                disabled={readOnly}
-              >
-                <SelectTrigger {...a11y('categoryId')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue placeholder="카테고리 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.data?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
-        <Field id={id('status')} label="상태" errors={errors} name="status">
-          <Controller
-            control={control}
-            name="status"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
-                <SelectTrigger {...a11y('status')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ProductStatus).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {PRODUCT_STATUS_LABEL[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
-        <Field id={id('price')} label="가격" errors={errors} name="price">
-          <Input
-            {...a11y('price')}
-            inputMode="numeric"
-            className={FORM_FIELD}
-            disabled={readOnly}
-            {...register('price')}
-          />
-        </Field>
-        {mode === 'create' && (
-          <Field id={id('initialStock')} label="초기 재고" errors={errors} name="initialStock">
+  return (
+    <form
+      id={formId}
+      noValidate
+      className={split ? 'contents' : 'flex max-w-3xl flex-col gap-5'}
+      onSubmit={handleSubmit(onValid)}
+    >
+      <div data-slot="product-form-main" className="flex flex-col gap-5">
+        {formError && (
+          <p role="alert" className="text-destructive text-sm">
+            {formError}
+          </p>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id={id('sku')} label="SKU" errors={errors} name="sku">
             <Input
-              {...a11y('initialStock')}
+              {...a11y('sku')}
+              className={cn(FORM_FIELD, isEdit && 'bg-muted')}
+              readOnly={isEdit}
+              disabled={readOnly}
+              autoComplete="off"
+              placeholder="예: TSHIRT-001"
+              {...register('sku')}
+            />
+          </Field>
+          <Field id={id('name')} label="상품명" errors={errors} name="name">
+            <Input
+              {...a11y('name')}
+              className={FORM_FIELD}
+              disabled={readOnly}
+              {...register('name')}
+            />
+          </Field>
+          <Field id={id('categoryId')} label="카테고리" errors={errors} name="categoryId">
+            <Controller
+              control={control}
+              name="categoryId"
+              render={({ field }) => (
+                <Select
+                  value={field.value || undefined}
+                  onValueChange={field.onChange}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger {...a11y('categoryId')} className={cn(FORM_FIELD, 'w-full')}>
+                    <SelectValue placeholder="카테고리 선택">
+                      {field.value
+                        ? (categories.data?.find((c) => c.id === field.value)?.name ?? (
+                            <Skeleton aria-hidden className="h-4 w-16" />
+                          ))
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.data?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field id={id('status')} label="상태" errors={errors} name="status">
+            <Controller
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
+                  <SelectTrigger {...a11y('status')} className={cn(FORM_FIELD, 'w-full')}>
+                    <SelectValue>{PRODUCT_STATUS_LABEL[field.value]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(ProductStatus).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {PRODUCT_STATUS_LABEL[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field id={id('price')} label="가격" errors={errors} name="price">
+            <Input
+              {...a11y('price')}
               inputMode="numeric"
               className={FORM_FIELD}
               disabled={readOnly}
-              {...register('initialStock')}
+              {...register('price')}
             />
           </Field>
-        )}
-        <Field id={id('safetyStock')} label="안전 재고" errors={errors} name="safetyStock">
-          <Input
-            {...a11y('safetyStock')}
-            inputMode="numeric"
+          {mode === 'create' && (
+            <Field id={id('initialStock')} label="초기 재고" errors={errors} name="initialStock">
+              <Input
+                {...a11y('initialStock')}
+                inputMode="numeric"
+                className={FORM_FIELD}
+                disabled={readOnly}
+                {...register('initialStock')}
+              />
+            </Field>
+          )}
+          <Field id={id('safetyStock')} label="안전 재고" errors={errors} name="safetyStock">
+            <Input
+              {...a11y('safetyStock')}
+              inputMode="numeric"
+              className={FORM_FIELD}
+              disabled={readOnly}
+              {...register('safetyStock')}
+            />
+          </Field>
+        </div>
+
+        <Field id={id('description')} label="설명" errors={errors} name="description">
+          <Textarea
+            {...a11y('description')}
+            rows={split ? 3 : 5}
             className={FORM_FIELD}
             disabled={readOnly}
-            {...register('safetyStock')}
+            {...register('description')}
           />
         </Field>
       </div>
 
-      <Field id={id('description')} label="설명" errors={errors} name="description">
-        <Textarea
-          {...a11y('description')}
-          rows={5}
-          className={FORM_FIELD}
-          disabled={readOnly}
-          {...register('description')}
-        />
-      </Field>
-
-      <div className={FORM_LABEL}>
+      <div data-slot="product-form-images" className={FORM_LABEL}>
         <span>이미지</span>
         <Controller
           control={control}
@@ -246,6 +307,7 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
               onChange={field.onChange}
               disabled={readOnly}
               onPendingChange={setUploading}
+              compact={split}
             />
           )}
         />
@@ -256,19 +318,49 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
         )}
       </div>
 
-      {!readOnly && (
-        <div className="flex items-center justify-end gap-3">
-          {uploading && (
-            <span role="status" className="text-muted-foreground text-xs">
-              {UPLOAD_PENDING_HINT}
-            </span>
-          )}
-          <Button type="submit" size="lg" disabled={save.isPending || uploading || !hasChanges}>
-            {save.isPending ? '저장 중...' : '저장'}
-          </Button>
-        </div>
-      )}
+      {inlineActions}
+      {portalActions}
     </form>
+  );
+}
+
+function FormActions({
+  formId,
+  readOnly,
+  uploading,
+  onCancel,
+  cancelLabel,
+  disabled,
+  pending,
+}: {
+  formId: string;
+  readOnly: boolean;
+  uploading: boolean;
+  onCancel?: () => void;
+  cancelLabel: string;
+  disabled: boolean;
+  pending: boolean;
+}) {
+  // 읽기 전용이어도 닫기(취소)는 남긴다. 모달에는 X가 없어 이 버튼이 닫는 길이다
+  if (readOnly && !onCancel) return null;
+  return (
+    <div className="flex items-center justify-end gap-3">
+      {uploading && (
+        <span role="status" className="text-muted-foreground text-xs">
+          {UPLOAD_PENDING_HINT}
+        </span>
+      )}
+      {onCancel && (
+        <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+      )}
+      {!readOnly && (
+        <Button type="submit" form={formId} size="lg" disabled={disabled}>
+          {pending ? '저장 중...' : '저장'}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -284,7 +376,7 @@ function Field({ id, label, name, errors, children }: FieldProps) {
   const message = errors[name]?.message;
   return (
     <div className={FORM_LABEL}>
-      <Label htmlFor={id} className="text-xs font-semibold">
+      <Label htmlFor={id} className="text-muted-strong text-[13px] font-semibold">
         {label}
       </Label>
       {children}

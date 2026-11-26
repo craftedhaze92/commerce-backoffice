@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
@@ -8,6 +8,7 @@ import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-
 import { REVOKE_DELAY_MS } from '@/shared/lib/save-blob';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
+import { productDetailFixture } from '@/shared/api/mocks/products';
 import { ProductListPage } from './product-list-page';
 
 vi.mock('next/navigation', async () => {
@@ -87,10 +88,12 @@ describe('ProductListPage', () => {
     expect(seen).toEqual(['']);
   });
 
-  it('manager sees 상품 등록 linking to /products/new', async () => {
+  it('manager opens the 상품 등록 modal from the list without leaving the page', async () => {
     renderWithQuery(<ProductListPage />);
-    const link = await screen.findByRole('link', { name: '상품 등록' });
-    expect(link).toHaveAttribute('href', '/products/new');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '상품 등록' }));
+    expect(await screen.findByRole('dialog', { name: '상품 등록' })).toBeInTheDocument();
+    expect(navReplace).not.toHaveBeenCalled();
   });
 
   it('with ?q=크림&lowStock=true&sort=price:asc, 엑셀 다운로드 requests /api/v1/products/export with the same filters', async () => {
@@ -126,54 +129,85 @@ describe('ProductListPage', () => {
     expect(screen.queryByRole('button', { name: '엑셀 다운로드' })).not.toBeInTheDocument();
   });
 
+  it('?detail=<id> opens the detail modal over the list; 닫기 drops only detail and keeps filters', async () => {
+    setMockSearch(`q=테스트&page=2&detail=${productDetailFixture.id}`);
+    renderWithQuery(<ProductListPage />);
+    const dialog = await screen.findByRole('dialog', { name: productDetailFixture.name });
+    expect(within(dialog).getByLabelText('상품명')).toHaveValue(productDetailFixture.name);
+    // X는 없고, 하단의 닫기 하나로 닫는다
+    const closes = within(dialog).getAllByRole('button', { name: '닫기' });
+    expect(closes).toHaveLength(1);
+    await userEvent.setup().click(closes[0]!);
+    expect(Object.fromEntries(new URLSearchParams(getMockSearch()))).toEqual({
+      q: '테스트',
+      page: '2',
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('product name links add detail to the current query instead of leaving the list', async () => {
+    setMockSearch('status=ON_SALE');
+    renderWithQuery(<ProductListPage />);
+    const link = await screen.findByRole('link', { name: '테스트 상품 1' });
+    const href = new URL(link.getAttribute('href')!, 'http://x');
+    expect(href.pathname).toBe('/products');
+    expect(href.searchParams.get('status')).toBe('ON_SALE');
+    expect(href.searchParams.get('detail')).toBeTruthy();
+  });
+
   it('viewer does not see 상품 등록', async () => {
     useRole(Role.VIEWER);
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 1');
-    expect(screen.queryByRole('link', { name: '상품 등록' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '상품 등록' })).not.toBeInTheDocument();
   });
 
-  it('typing in search updates URL once after 300ms with page reset', async () => {
+  it('typing alone does not search; Enter submits q once and resets page', async () => {
     setMockSearch('page=2');
+    const seen: string[] = [];
+    server.use(
+      http.get('/api/v1/products', ({ request }) => {
+        seen.push(new URL(request.url).search);
+        return undefined;
+      }),
+    );
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 21');
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      const input = screen.getByRole('searchbox', { name: '상품 검색' });
-      await user.type(input, '상품 3');
-      expect(input).toHaveValue('상품 3');
-      expect(navReplace).not.toHaveBeenCalled();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(navReplace).toHaveBeenCalledTimes(1);
-      expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
-      expect(getMockSearch()).not.toContain('page=');
-      expect(input).toHaveValue('상품 3');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    const input = screen.getByRole('searchbox', { name: '상품 검색' });
+    await user.type(input, '상품 3');
+    // 디바운스 시간이 지나도 입력만으로는 요청하지 않는다
+    await new Promise((r) => setTimeout(r, 400));
+    expect(navReplace).not.toHaveBeenCalled();
+    expect(seen.some((q) => q.includes('q='))).toBe(false);
+    await user.keyboard('{Enter}');
+    expect(navReplace).toHaveBeenCalledTimes(1);
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
+    expect(getMockSearch()).not.toContain('page=');
+    expect(input).toHaveValue('상품 3');
+    await waitFor(() =>
+      expect(seen.some((q) => new URLSearchParams(q).get('q') === '상품 3')).toBe(true),
+    );
   });
 
-  it('초기화 cancels a pending search debounce even when URL q is empty', async () => {
+  it('검색 button submits the trimmed query', async () => {
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 1');
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), 'a');
-      await user.click(screen.getByRole('button', { name: '초기화' }));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(getMockSearch()).toBe('');
-      expect(screen.getByRole('searchbox', { name: '상품 검색' })).toHaveValue('');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), '  상품 3  ');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
   });
 
+  it('초기화 discards text that was typed but not submitted', async () => {
+    renderWithQuery(<ProductListPage />);
+    await screen.findByText('테스트 상품 1');
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), 'a');
+    await user.click(screen.getByRole('button', { name: '초기화' }));
+    expect(getMockSearch()).toBe('');
+    expect(screen.getByRole('searchbox', { name: '상품 검색' })).toHaveValue('');
+  });
   it('selecting status writes ?status=ON_SALE and requests it', async () => {
     const seen = recordProductRequests();
     renderWithQuery(<ProductListPage />);

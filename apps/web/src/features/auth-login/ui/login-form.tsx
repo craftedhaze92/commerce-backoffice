@@ -79,7 +79,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </p>
       )}
       <div className={FORM_LABEL}>
-        <Label htmlFor="login-email" className="text-xs font-semibold">
+        <Label htmlFor="login-email" className="text-muted-strong text-[13px] font-semibold">
           이메일
         </Label>
         <Input
@@ -98,7 +98,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         )}
       </div>
       <div className={FORM_LABEL}>
-        <Label htmlFor="login-password" className="text-xs font-semibold">
+        <Label htmlFor="login-password" className="text-muted-strong text-[13px] font-semibold">
           비밀번호
         </Label>
         <Input
@@ -120,14 +120,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {login.isPending ? '로그인 중...' : '로그인'}
       </Button>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">데모 계정</span>
+        <span className="text-muted-foreground text-[13px] font-medium">데모 계정으로 채우기</span>
         <div className="flex gap-2">
           {DEMO_ACCOUNTS.map(({ label, email }) => (
             <Button
               key={email}
               type="button"
-              variant="outline"
-              size="sm"
+              variant="secondary"
               className="flex-1"
               onClick={() => fillDemo(email)}
             >

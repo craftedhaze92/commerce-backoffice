@@ -59,3 +59,37 @@ export function useUrlState<S extends z.ZodType>(
 
   return [value, set];
 }
+
+/**
+ * 쿼리 키 하나를 읽고 쓴다. 다른 키(필터·정렬·페이지)는 그대로 둔다.
+ * 목록 위에 띄우는 모달(`?detail=<id>`)처럼 목록 상태와 따로 움직이는 값에 쓴다.
+ */
+export function useQueryParam(
+  key: string,
+): [string | undefined, (value: string | undefined) => void] {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const value = searchParams.get(key) ?? undefined;
+
+  const set = useCallback(
+    (next: string | undefined) => {
+      const qs = new URLSearchParams(search);
+      if (next === undefined || next === '') qs.delete(key);
+      else qs.set(key, next);
+      const query = qs.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [key, search, router, pathname],
+  );
+
+  return [value, set];
+}
+
+/** 지금 쿼리에 키 하나를 더하거나 바꾼 `?…` 문자열. 링크 href를 만들 때 쓴다. */
+export function withQueryParam(search: string, key: string, value: string): string {
+  const qs = new URLSearchParams(search);
+  qs.set(key, value);
+  return `?${qs.toString()}`;
+}

@@ -20,7 +20,7 @@ describe('LowStockTable', () => {
     const first = productFixtures[0];
     expect(await screen.findByRole('link', { name: first.name })).toHaveAttribute(
       'href',
-      `/products/${first.id}`,
+      `/products?detail=${first.id}`,
     );
     expect(seen).toHaveLength(1);
     const qs = new URLSearchParams(seen[0]);

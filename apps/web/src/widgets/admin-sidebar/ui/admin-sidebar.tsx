@@ -24,7 +24,7 @@ function SidebarSkeleton() {
   return (
     <div data-testid="sidebar-skeleton" className="flex flex-col gap-2 p-2">
       {[0, 1, 2].map((i) => (
-        <Skeleton key={i} className="h-8 w-full" />
+        <Skeleton key={i} className="h-11 w-full rounded-lg" />
       ))}
     </div>
   );
@@ -37,7 +37,7 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <span className="px-2 text-base font-bold">커머스 백오피스</span>
+        <span className="px-3 py-2 text-lg font-bold tracking-tight">커머스 백오피스</span>
       </SidebarHeader>
       <SidebarContent>
         {isPending || !me ? (
@@ -74,10 +74,29 @@ export function AdminSidebar() {
         )}
       </SidebarContent>
       <SidebarFooter>
+        {isPending && (
+          <div aria-hidden className="flex items-center gap-3 px-3 py-2">
+            <Skeleton className="size-9 rounded-full" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          </div>
+        )}
         {me && (
-          <div className="flex items-center gap-2 px-2">
-            <span className="truncate text-sm font-semibold">{me.name}</span>
-            <Badge variant="outline">{ROLE_LABEL[me.role]}</Badge>
+          <div className="flex items-center gap-3 px-3 py-2">
+            <span
+              aria-hidden
+              className="bg-brand-weak text-accent-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
+            >
+              {me.name.slice(0, 1)}
+            </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] font-semibold">{me.name}</span>
+              <span className="text-muted-foreground text-[13px] font-medium">
+                {ROLE_LABEL[me.role]}
+              </span>
+            </div>
           </div>
         )}
         <LogoutButton />

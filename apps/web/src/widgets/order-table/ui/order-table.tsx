@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { OrderListItem } from '@bo/contracts';
 import { Button } from '@/shared/ui/button';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows, type SkeletonCellKind } from '@/shared/ui/table-skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -25,7 +25,12 @@ interface OrderTableProps {
   onSortChange: (next: SortValue) => void;
 }
 
-const SKELETON_ROWS = [0, 1, 2, 3, 4];
+/** 로딩 중 각 컬럼 자리에 그릴 모양. 실제 셀과 같은 정렬·크기로 맞춘다. */
+const SKELETON_CELL: Record<string, SkeletonCellKind> = {
+  status: 'badge',
+  itemCount: 'number',
+  totalAmount: 'number',
+};
 
 export function OrderTable({
   data,
@@ -69,7 +74,11 @@ export function OrderTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={cn('-mx-2', right && 'flex-row-reverse')}
+                        className={cn(
+                          'text-muted-foreground -mx-2 h-7 px-2 text-[13px] font-medium',
+                          state !== 'none' && 'text-foreground font-semibold',
+                          right && 'flex-row-reverse',
+                        )}
                         onClick={() => onSortChange(nextSort(sort, field))}
                       >
                         {label}
@@ -92,13 +101,10 @@ export function OrderTable({
         </TableHeader>
         <TableBody>
           {isPending ? (
-            SKELETON_ROWS.map((i) => (
-              <TableRow key={i} data-testid="order-skeleton-row" aria-busy="true">
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-10 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
+            <TableSkeletonRows
+              testId="order-skeleton-row"
+              cells={table.getVisibleLeafColumns().map((c) => SKELETON_CELL[c.id] ?? 'text')}
+            />
           ) : isError ? (
             <TableRow>
               <TableCell colSpan={colSpan}>

@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { INVENTORY_LIMITS, type InsufficientStockItem } from '@bo/contracts';
 import type { ApiError } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import {
   Dialog,
   DialogContent,
@@ -108,6 +109,7 @@ export function AdjustInventoryDialog({
               onSuccess: () => {
                 reset(DEFAULTS);
                 setOpen(false);
+                toast('재고를 조정했습니다');
                 onAdjusted?.();
               },
             }),

@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { PRODUCT_LIMITS, ProductStatus } from '@bo/contracts';
 import { useCategories } from '@/entities/category';
 import { PRODUCT_STATUS_LABEL, type ProductListParams } from '@/entities/product';
 import { Button } from '@/shared/ui/button';
+import { SearchButton, SearchField } from '@/shared/ui/search-field';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Toggle } from '@/shared/ui/toggle';
 import type { ProductListPatch } from '../model/product-list-params';
 
-const SEARCH_DEBOUNCE_MS = 300;
 const ALL = 'all';
 export const PRICE_RANGE_ERROR = '최소 가격이 최대 가격보다 클 수 없습니다';
 const PRICE_INVALID_ERROR = `가격은 0 이상 ${PRODUCT_LIMITS.maxPrice.toLocaleString('ko-KR')} 이하의 정수여야 합니다`;
@@ -18,22 +19,39 @@ const PRICE_INVALID_ERROR = `가격은 0 이상 ${PRODUCT_LIMITS.maxPrice.toLoca
 interface ProductFilterBarProps {
   params: ProductListParams;
   onChange: (patch: ProductListPatch) => void;
+  /** 줄 맨 오른쪽에 둘 요소(예: 컬럼 메뉴). */
+  trailing?: ReactNode;
 }
 
-export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
+export function ProductFilterBar({ params, onChange, trailing }: ProductFilterBarProps) {
   const categories = useCategories();
-  // 초기화 시 SearchInput을 다시 마운트해 입력 중인 글자와 대기 중인 디바운스를 함께 버린다
+  // 초기화 시 검색 입력을 다시 마운트해 제출하지 않은 글자도 함께 버린다
   const [resetKey, setResetKey] = useState(0);
+  const searchFormId = useId();
 
   return (
-    <div className="flex flex-wrap items-start gap-3">
-      <SearchInput key={resetKey} q={params.q} onCommit={(q) => onChange({ q })} />
+    <div className="flex flex-wrap items-start gap-2">
+      <SearchField
+        formId={searchFormId}
+        key={resetKey}
+        value={params.q}
+        onSearch={(q) => onChange({ q })}
+        label="상품 검색"
+        placeholder="상품명 또는 SKU"
+        maxLength={50}
+      />
       <Select
         value={params.categoryId ?? ALL}
         onValueChange={(v) => onChange({ categoryId: v === ALL ? undefined : v })}
       >
-        <SelectTrigger aria-label="카테고리" className="w-40">
-          <SelectValue placeholder="카테고리" />
+        <SelectTrigger aria-label="카테고리" className="w-36">
+          <SelectValue placeholder="카테고리">
+            {params.categoryId === undefined
+              ? '전체'
+              : (categories.data?.find((c) => c.id === params.categoryId)?.name ?? (
+                  <Skeleton aria-hidden className="h-4 w-14" />
+                ))}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>전체</SelectItem>
@@ -48,8 +66,10 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
         value={params.status ?? ALL}
         onValueChange={(v) => onChange({ status: v === ALL ? undefined : (v as ProductStatus) })}
       >
-        <SelectTrigger aria-label="상태" className="w-32">
-          <SelectValue placeholder="상태" />
+        <SelectTrigger aria-label="상태" className="w-28">
+          <SelectValue placeholder="상태">
+            {params.status === undefined ? '전체' : PRODUCT_STATUS_LABEL[params.status]}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>전체</SelectItem>
@@ -66,7 +86,7 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
         onCommit={(patch) => onChange(patch)}
       />
       <Toggle
-        variant="outline"
+        className="bg-canvas"
         pressed={params.lowStock}
         onPressedChange={(pressed) => onChange({ lowStock: pressed })}
         aria-label="재고 부족만"
@@ -89,51 +109,9 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
       >
         초기화
       </Button>
+      <SearchButton form={searchFormId} />
+      {trailing && <div className="ml-auto">{trailing}</div>}
     </div>
-  );
-}
-
-/**
- * 입력 중인 글자는 컴포넌트가 들고 있고, 300ms 멈추면 한 번만 URL에 쓴다.
- * URL 값이 바뀌었을 때 그것이 방금 우리가 쓴 값이 아닐 때만(예: 초기화) 입력창을 맞춘다.
- */
-function SearchInput({ q, onCommit }: { q: string; onCommit: (q: string) => void }) {
-  const [text, setText] = useState(q);
-  const [committed, setCommitted] = useState(q);
-  const [seenUrlQ, setSeenUrlQ] = useState(q);
-
-  if (q !== seenUrlQ) {
-    setSeenUrlQ(q);
-    if (q !== committed) {
-      setCommitted(q);
-      setText(q);
-    }
-  }
-
-  const onCommitRef = useRef(onCommit);
-  useEffect(() => {
-    onCommitRef.current = onCommit;
-  });
-
-  useEffect(() => {
-    if (text === committed) return;
-    const timer = setTimeout(() => {
-      setCommitted(text);
-      onCommitRef.current(text);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [text, committed]);
-
-  return (
-    <Input
-      type="search"
-      aria-label="상품 검색"
-      placeholder="상품명 또는 SKU"
-      className="w-56"
-      value={text}
-      maxLength={50}
-      onChange={(e) => setText(e.target.value)}
-    />
   );
 }
 
@@ -199,7 +177,7 @@ function PriceRange({ min, max, onCommit }: PriceRangeProps) {
           inputMode="numeric"
           aria-label="최소 가격"
           placeholder="최소 가격"
-          className="w-28"
+          className="w-24"
           value={minText}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
@@ -214,7 +192,7 @@ function PriceRange({ min, max, onCommit }: PriceRangeProps) {
           inputMode="numeric"
           aria-label="최대 가격"
           placeholder="최대 가격"
-          className="w-28"
+          className="w-24"
           value={maxText}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}

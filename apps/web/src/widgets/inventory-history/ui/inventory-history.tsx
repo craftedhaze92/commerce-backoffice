@@ -8,10 +8,9 @@ import { cn } from '@/shared/lib/utils';
 import { kst } from '@/shared/lib/dayjs';
 import { Button } from '@/shared/ui/button';
 import { DataPagination } from '@/shared/ui/data-pagination';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows } from '@/shared/ui/table-skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
-const SKELETON_ROWS = [0, 1, 2, 3, 4];
 const COLUMNS = ['일시', '사유', '증감', '조정 후 재고', '처리자', '비고'];
 
 function signed(delta: number): string {
@@ -30,15 +29,29 @@ function Remark({ item }: { item: InventoryHistoryItem }) {
   return <>-</>;
 }
 
-export function InventoryHistory({ productId }: { productId: string }) {
+interface InventoryHistoryProps {
+  productId: string;
+  /** 한 페이지에 보일 이력 수. 상품 상세 모달은 5개씩 넘겨 본다. */
+  pageSize?: number;
+  /** true면 행을 낮추고 칸 여백을 줄인다(좁은 모달용). 페이지 크기만큼 높이를 잡아 둬 넘길 때 흔들리지 않는다. */
+  compact?: boolean;
+}
+
+export function InventoryHistory({ productId, pageSize, compact = false }: InventoryHistoryProps) {
   const [page, setPage] = useState(1);
-  const history = useInventoryHistory(productId, page);
+  const history = useInventoryHistory(productId, page, pageSize);
   const items = history.data?.items ?? [];
   const totalPages = history.data?.meta.totalPages ?? 1;
 
   return (
-    <div className="flex flex-col gap-2">
-      <Table>
+    <div className={cn('flex flex-col gap-2', compact && 'min-h-[18.75rem] flex-1')}>
+      <Table
+        // 좁은 열에서도 가로로 넘치지 않게 칸 여백을 줄이고 줄바꿈을 허용한다(비고의 주문번호 등)
+        className={cn(
+          compact &&
+            '[&_td]:h-11 [&_td]:px-2 [&_td]:py-1 [&_td]:break-all [&_td]:whitespace-normal [&_th]:h-10 [&_th]:px-2',
+        )}
+      >
         <TableHeader>
           <TableRow>
             {COLUMNS.map((c, i) => (
@@ -50,13 +63,11 @@ export function InventoryHistory({ productId }: { productId: string }) {
         </TableHeader>
         <TableBody>
           {history.isPending ? (
-            SKELETON_ROWS.map((i) => (
-              <TableRow key={i} data-testid="inventory-skeleton-row" aria-busy="true">
-                <TableCell colSpan={COLUMNS.length}>
-                  <Skeleton className="h-8 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
+            <TableSkeletonRows
+              rows={Math.min(pageSize ?? 5, 5)}
+              testId="inventory-skeleton-row"
+              cells={['text', 'badge', 'number', 'number', 'text', 'text']}
+            />
           ) : history.isError ? (
             <TableRow>
               <TableCell colSpan={COLUMNS.length}>
@@ -80,7 +91,9 @@ export function InventoryHistory({ productId }: { productId: string }) {
           ) : (
             items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell>{kst(item.createdAt).format('YYYY.MM.DD HH:mm')}</TableCell>
+                <TableCell className={cn(compact && 'break-normal whitespace-nowrap')}>
+                  {kst(item.createdAt).format(compact ? 'MM.DD HH:mm' : 'YYYY.MM.DD HH:mm')}
+                </TableCell>
                 <TableCell>{INVENTORY_REASON_LABEL[item.reason]}</TableCell>
                 <TableCell
                   className={cn(
@@ -100,7 +113,12 @@ export function InventoryHistory({ productId }: { productId: string }) {
           )}
         </TableBody>
       </Table>
-      <DataPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <DataPagination
+        className={cn(compact && 'mt-auto')}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

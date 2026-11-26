@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { OrderStatus, Role, type OrderListItem } from '@bo/contracts';
@@ -9,7 +9,7 @@ import { REVOKE_DELAY_MS } from '@/shared/lib/save-blob';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { orderFixtures, seedOrderMock } from '@/shared/api/mocks/orders';
-import { kstPreset } from '@/shared/lib/date-range';
+import { kstPreset, kstToday } from '@/shared/lib/date-range';
 import { OrderListPage } from './order-list-page';
 
 vi.mock('next/navigation', async () => {
@@ -62,6 +62,24 @@ beforeAll(() => {
   Element.prototype.releasePointerCapture ??= () => {};
   Element.prototype.scrollIntoView ??= () => {};
 });
+
+/** 열린 달력의 날짜 버튼을 `YYYY-MM-DD`와 함께 돌려준다(data-day는 ko 로캘 표기 "2026. 11. 26."). */
+function calendarDays(): { date: string; button: HTMLElement }[] {
+  return within(screen.getByRole('grid'))
+    .getAllByRole('button')
+    .flatMap((button) => {
+      const m = /(\d+)\.\s*(\d+)\.\s*(\d+)/.exec(button.getAttribute('data-day') ?? '');
+      if (!m) return [];
+      const date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+      return [{ date, button }];
+    });
+}
+
+function dayButton(date: string): HTMLElement {
+  const found = calendarDays().find((d) => d.date === date);
+  if (!found) throw new Error(`calendar has no day ${date}`);
+  return found.button;
+}
 
 describe('OrderListPage', () => {
   beforeEach(() => {
@@ -123,29 +141,53 @@ describe('OrderListPage', () => {
       'true',
     );
     expect(screen.getByRole('button', { name: '오늘' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByLabelText('시작일')).toHaveValue(from);
+    expect(
+      screen.getByRole('button', { name: `시작일 ${from.replaceAll('-', '.')}` }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '전체' }));
     expect(getMockSearch()).toBe('');
-    expect(screen.getByLabelText('시작일')).toHaveValue('');
+    expect(screen.getByRole('button', { name: '시작일' })).toBeInTheDocument();
   });
 
-  it('date input commits on change', async () => {
+  it('picking a day in the 종료일 calendar commits it to the URL and closes the calendar', async () => {
     renderWithQuery(<OrderListPage />);
     await screen.findByText('총 30건');
-    fireEvent.change(screen.getByLabelText('종료일'), { target: { value: '2026-11-20' } });
-    expect(getMockSearch()).toBe('to=2026-11-20');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '종료일' }));
+    const today = kstToday();
+    await user.click(dayButton(today));
+    expect(getMockSearch()).toBe(`to=${today}`);
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: `종료일 ${today.replaceAll('-', '.')}` }),
+    ).toBeInTheDocument();
   });
 
-  it('date input start > end shows inline error and leaves URL unchanged', async () => {
+  it('days after today (KST) cannot be picked in either calendar', async () => {
+    renderWithQuery(<OrderListPage />);
+    await screen.findByText('총 30건');
+    const user = userEvent.setup();
+    const today = kstToday();
+    for (const name of ['시작일', '종료일']) {
+      await user.click(screen.getByRole('button', { name }));
+      const days = calendarDays();
+      expect(days.some((d) => d.date > today)).toBe(true);
+      for (const d of days) {
+        if (d.date > today) expect(d.button).toBeDisabled();
+      }
+      expect(dayButton(today)).toBeEnabled();
+      await user.keyboard('{Escape}');
+    }
+  });
+
+  it('시작일 calendar disables days after the chosen 종료일 so start > end cannot be picked', async () => {
     setMockSearch('to=2026-11-10');
     renderWithQuery(<OrderListPage />);
     await screen.findByText(/^총 /);
-    fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '2026-11-20' } });
-    expect(screen.getByRole('alert')).toHaveTextContent('시작일이 종료일보다 늦을 수 없습니다');
-    expect(navReplace).not.toHaveBeenCalled();
-    expect(getMockSearch()).toBe('to=2026-11-10');
-    // 올바른 값으로 고치면 에러가 사라지고 반영된다
-    fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '2026-11-01' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '시작일' }));
+    expect(dayButton('2026-11-20')).toBeDisabled();
+    await user.click(dayButton('2026-11-01'));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(Object.fromEntries(new URLSearchParams(getMockSearch()))).toEqual({
       from: '2026-11-01',
@@ -153,44 +195,52 @@ describe('OrderListPage', () => {
     });
   });
 
-  it('search debounce writes q once after 300ms', async () => {
+  it('typing alone does not search; Enter submits q once and resets page', async () => {
     setMockSearch('page=2');
+    const seen: string[] = [];
+    server.use(
+      http.get('/api/v1/orders', ({ request }) => {
+        seen.push(new URL(request.url).search);
+        return undefined;
+      }),
+    );
     renderWithQuery(<OrderListPage />);
     await screen.findByText(/^총 /);
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), '고객 3');
-      expect(navReplace).not.toHaveBeenCalled();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(navReplace).toHaveBeenCalledTimes(1);
-      expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
-      expect(getMockSearch()).not.toContain('page=');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    const input = screen.getByRole('searchbox', { name: '주문 검색' });
+    await user.type(input, '고객 3');
+    // 디바운스 시간이 지나도 입력만으로는 요청하지 않는다
+    await new Promise((r) => setTimeout(r, 400));
+    expect(navReplace).not.toHaveBeenCalled();
+    expect(seen.some((q) => q.includes('q='))).toBe(false);
+    await user.keyboard('{Enter}');
+    expect(navReplace).toHaveBeenCalledTimes(1);
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
+    expect(getMockSearch()).not.toContain('page=');
+    expect(input).toHaveValue('고객 3');
+    await waitFor(() =>
+      expect(seen.some((q) => new URLSearchParams(q).get('q') === '고객 3')).toBe(true),
+    );
   });
 
-  it('초기화 cancels a pending search debounce', async () => {
+  it('검색 button submits the trimmed query', async () => {
     renderWithQuery(<OrderListPage />);
     await screen.findByText(/^총 /);
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), 'a');
-      await user.click(screen.getByRole('button', { name: '초기화' }));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(getMockSearch()).toBe('');
-      expect(screen.getByRole('searchbox', { name: '주문 검색' })).toHaveValue('');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), '  고객 3  ');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
   });
 
+  it('초기화 discards text that was typed but not submitted', async () => {
+    renderWithQuery(<OrderListPage />);
+    await screen.findByText(/^총 /);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), 'a');
+    await user.click(screen.getByRole('button', { name: '초기화' }));
+    expect(getMockSearch()).toBe('');
+    expect(screen.getByRole('searchbox', { name: '주문 검색' })).toHaveValue('');
+  });
   it('?to=2026-11-20 includes 23:59 KST and excludes 00:00 KST of the next day', async () => {
     const mk = (n: number, createdAt: string): OrderListItem => ({
       ...orderFixtures[0],

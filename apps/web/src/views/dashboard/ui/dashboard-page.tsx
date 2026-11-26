@@ -8,6 +8,7 @@ import { LowStockTable } from '@/widgets/low-stock-table';
 import { RecentOrders } from '@/widgets/recent-orders';
 import { SalesTrendChart } from '@/widgets/sales-trend-chart';
 import { useUrlState } from '@/shared/lib/url-state';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group';
 import { dashboardSchema } from '../model/dashboard-params';
 
@@ -17,19 +18,23 @@ export function DashboardPage() {
   const [{ days }, setParams] = useUrlState(dashboardSchema);
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-bold">대시보드</h1>
-          <p className="text-muted-foreground text-sm">
-            {me ? `${me.name}님, 안녕하세요` : '안녕하세요'}
-            {summary ? ` · 기준일 ${summary.today}` : ''}
-          </p>
+          <h1 className="text-title">대시보드</h1>
+          {me ? (
+            <p className="text-muted-foreground text-[15px] font-medium">
+              {`${me.name}님, 안녕하세요`}
+              {summary ? ` · 기준일 ${summary.today}` : ''}
+            </p>
+          ) : (
+            <Skeleton aria-hidden className="my-0.5 h-4 w-48" />
+          )}
         </div>
         <ToggleGroup
           type="single"
-          variant="outline"
           size="sm"
+          className="bg-card rounded-xl p-1"
           aria-label="차트 기간"
           value={String(days)}
           onValueChange={(v) => {

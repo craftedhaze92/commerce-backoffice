@@ -26,3 +26,25 @@ export function isValidDateString(value: string): boolean {
   const date = new Date(Date.UTC(y, mo - 1, d));
   return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
 }
+
+/** KST 기준 오늘(`YYYY-MM-DD`). 달력의 "미래 날짜 막기" 기준이다. */
+export function kstToday(now: Date = new Date()): string {
+  return kst(now).format(DATE_FORMAT);
+}
+
+/**
+ * `YYYY-MM-DD`를 달력이 쓰는 로컬 자정 Date로 바꾼다. 달력은 시간대가 아니라 '날짜'를 다루므로
+ * 로컬 연·월·일로 만든다(UTC로 만들면 음수 시간대에서 하루가 밀린다).
+ */
+export function dateStringToDate(value: string): Date {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** 달력에서 고른 Date(로컬 날짜)를 `YYYY-MM-DD`로 바꾼다. */
+export function dateToDateString(date: Date): string {
+  const y = String(date.getFullYear()).padStart(4, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}

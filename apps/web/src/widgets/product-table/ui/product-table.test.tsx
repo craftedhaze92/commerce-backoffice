@@ -3,21 +3,25 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { productFixtures } from '@/shared/api/mocks/products';
 import { useColumnVisibility } from '../model/column-visibility-store';
+import { ProductColumnMenu } from './product-column-menu';
 import { ProductTable } from './product-table';
 
 function setup(over: Partial<React.ComponentProps<typeof ProductTable>> = {}) {
   const onSortChange = vi.fn();
   const onRetry = vi.fn();
   render(
-    <ProductTable
-      data={productFixtures.slice(0, 5)}
-      isPending={false}
-      isError={false}
-      onRetry={onRetry}
-      sort="createdAt:desc"
-      onSortChange={onSortChange}
-      {...over}
-    />,
+    <>
+      <ProductColumnMenu />
+      <ProductTable
+        data={productFixtures.slice(0, 5)}
+        isPending={false}
+        isError={false}
+        onRetry={onRetry}
+        sort="createdAt:desc"
+        onSortChange={onSortChange}
+        {...over}
+      />
+    </>,
   );
   return { onSortChange, onRetry };
 }
@@ -35,7 +39,7 @@ describe('ProductTable', () => {
     expect(rows).toHaveLength(6);
     expect(screen.getByRole('link', { name: '테스트 상품 1' })).toHaveAttribute(
       'href',
-      `/products/${productFixtures[0].id}`,
+      `/products?detail=${productFixtures[0].id}`,
     );
     expect(screen.getByText('SKU-0001')).toBeInTheDocument();
     expect(screen.getByText('₩11,000')).toBeInTheDocument();

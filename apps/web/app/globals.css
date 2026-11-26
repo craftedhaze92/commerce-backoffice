@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * 색상 토큰은 v2 디자인 시안에서 추출했다.
+ * 색상 토큰은 v2 디자인 시안에서 추출했고, 토스 UI를 참고해 크기·모서리·밀도를 다듬었다.
+ * 원칙: 회색 바탕 위 흰 시트, 테두리·그림자 대신 면 대비, 숫자는 크고 굵게.
  * 이번 단계는 라이트 전용이므로 .dark 블록은 유지만 하고 사용하지 않는다.
  */
 :root {
@@ -25,8 +26,8 @@
   --secondary-foreground: #191f28;
   --muted: #f7f8fa;
   --muted-foreground: #8b95a1;
-  --accent: #f2f7ff;
-  --accent-foreground: #3182f6;
+  --accent: #e8f3ff;
+  --accent-foreground: #1b64da;
   --destructive: #f04452;
   --border: #f2f4f6;
   --input: #d8dee6;
@@ -36,15 +37,15 @@
   --chart-3: #93a6c6;
   --chart-4: #cfd8e6;
   --chart-5: #eef1f5;
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.75rem; /* 버튼·입력 12px, 시트는 rounded-2xl(약 20px) */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #4e5968;
+  --sidebar-primary: #3182f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f4f6;
+  --sidebar-accent-foreground: #191f28;
+  --sidebar-border: #f2f4f6;
+  --sidebar-ring: #3182f6;
 }
 
 /* 시안 전용 토큰 — Tailwind 유틸리티(bg-brand, bg-canvas ...)로 노출된다 */
@@ -59,6 +60,12 @@
   --color-track: #eef1f5;
   --color-hairline: #d8dee6;
   --color-muted-strong: #4e5968;
+  --color-brand-weak: #e8f3ff;
+  --color-brand-weak-hover: #d6e9ff;
+  --color-danger-weak: #ffeeee;
+  --color-danger-weak-hover: #ffdede;
+  --color-success: #03b26c;
+  --color-success-weak: #e5f8ef;
 
   /*
    * 섹터 도넛용 카테고리컬 팔레트 — 섹터는 크기가 아니라 '정체성'이라 색상을 나눈다.
@@ -172,8 +179,81 @@
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: -0.01em;
   }
   html {
     @apply font-sans;
+  }
+
+  /*
+   * Tailwind v4는 버튼의 기본 cursor를 default로 둔다. 누를 수 있는 요소는 모두 pointer,
+   * 비활성 요소는 not-allowed로 맞춘다. 개별 컴포넌트에 cursor 클래스를 흩뿌리지 않는다.
+   */
+  button:not(:disabled):not([aria-disabled='true']),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='menuitem']:not([data-disabled]),
+  [role='menuitemcheckbox']:not([data-disabled]),
+  [role='option']:not([data-disabled]),
+  [role='checkbox']:not(:disabled),
+  [role='switch']:not(:disabled),
+  [role='combobox']:not(:disabled),
+  label[for],
+  summary,
+  select:not(:disabled),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  button[aria-disabled='true'],
+  [role='button'][aria-disabled='true'],
+  [role='tab'][aria-disabled='true'],
+  [role='combobox']:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* 타입 스케일: 페이지 제목 26 / 섹션 제목 17 / 본문 15 / 캡션 13 */
+@utility text-title {
+  font-size: 1.625rem;
+  line-height: 2.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+@utility text-section {
+  font-size: 1.0625rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+@utility text-figure {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 흰 시트: 회색 캔버스 위의 기본 컨테이너. 테두리·그림자 없이 면 대비로만 구분한다. */
+@utility sheet {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: 1.25rem;
+}
+
+/* 누를 때만 반응한다. 장식 애니메이션은 두지 않는다. */
+@utility pressable {
+  transition-property: transform, background-color, color;
+  transition-duration: 150ms;
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      transform: none;
+    }
   }
 }

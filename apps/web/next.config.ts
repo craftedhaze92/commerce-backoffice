@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname, '../..'),
   },
   reactCompiler: true,
+  // 상품 등록·상세는 목록 위 모달로 옮겼다. 예전 주소로 들어오면 목록(상세는 ?detail=)으로 보낸다
+  async redirects() {
+    return [
+      { source: '/products/new', destination: '/products', permanent: false },
+      { source: '/products/:id', destination: '/products?detail=:id', permanent: false },
+    ];
+  },
   async rewrites() {
     return [
       {

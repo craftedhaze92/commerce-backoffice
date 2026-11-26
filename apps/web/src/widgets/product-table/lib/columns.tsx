@@ -1,11 +1,12 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { ImageIcon } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ProductListItem, ProductSortField } from '@bo/contracts';
 import { ProductStatusBadge, type ProductListParams } from '@/entities/product';
 import { kst } from '@/shared/lib/dayjs';
 import { formatWon } from '@/shared/lib/format-won';
 import { Badge } from '@/shared/ui/badge';
+import { ProductNameLink } from '../ui/product-name-link';
 
 export type SortValue = ProductListParams['sort'];
 
@@ -56,10 +57,15 @@ export const productColumns: ColumnDef<ProductListItem>[] = [
           width={40}
           height={40}
           unoptimized
-          className="size-10 rounded-md object-cover"
+          className="size-10 rounded-lg object-cover"
         />
       ) : (
-        <div aria-hidden className="bg-muted size-10 rounded-md" />
+        <div
+          aria-hidden
+          className="bg-canvas text-hairline flex size-10 items-center justify-center rounded-lg"
+        >
+          <ImageIcon className="size-5" />
+        </div>
       );
     },
   },
@@ -68,12 +74,7 @@ export const productColumns: ColumnDef<ProductListItem>[] = [
     header: '상품명',
     cell: ({ row }) => (
       <div className="flex flex-col">
-        <Link
-          href={`/products/${row.original.id}`}
-          className="font-medium hover:underline focus-visible:underline"
-        >
-          {row.original.name}
-        </Link>
+        <ProductNameLink id={row.original.id}>{row.original.name}</ProductNameLink>
         <span className="text-muted-foreground text-xs">{row.original.sku}</span>
       </div>
     ),

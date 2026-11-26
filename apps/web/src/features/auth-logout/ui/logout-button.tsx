@@ -25,7 +25,13 @@ export function LogoutButton() {
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" disabled={pending} onClick={logout}>
+    <Button
+      type="button"
+      variant="ghost"
+      className="text-muted-foreground w-full justify-start"
+      disabled={pending}
+      onClick={logout}
+    >
       <LogOut />
       로그아웃
     </Button>

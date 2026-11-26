@@ -23,7 +23,16 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import { useOrderTransition } from '../model/use-order-transition';
+
+/** 처리에 성공했을 때 토스트 문구. 버튼 이름과 같은 동사를 쓴다. */
+const ACTION_DONE: Record<OrderAction, string> = {
+  confirm: '주문을 확정했습니다',
+  ship: '출고 처리했습니다',
+  deliver: '배송 완료로 바꿨습니다',
+  cancel: '주문을 취소했습니다',
+};
 
 const ACTION_LABEL: Record<OrderAction, string> = {
   confirm: '확정',
@@ -80,6 +89,7 @@ export function OrderActions({ order }: { order: OrderDetail }) {
 
   const run = (action: OrderAction, onDone?: () => void) => {
     transition.mutate(action, {
+      onSuccess: () => toast(ACTION_DONE[action]),
       onError: (error) => {
         // 오래된 화면이다. 최신 상태를 다시 불러온다
         if (error.status === 409) {
