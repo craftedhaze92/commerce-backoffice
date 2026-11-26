@@ -138,7 +138,7 @@ apps/web/src/
   - `CLOCK: unique symbol`, `type Clock = () => Date`. `DashboardModule`이 `{ provide: CLOCK, useValue: () => new Date() }`를 등록한다.
   - `kstDateOf(at: Date): string`(KST 날짜 `YYYY-MM-DD`), `addKstDays(day: string, n: number): string`
   - `createTestApp({ env?, providers?: Array<{ provide: unknown; useValue: unknown }> })`. `providers`는 `Test.createTestingModule(...).overrideProvider(p.provide).useValue(p.useValue)`로 적용한다.
-  - `DashboardService.summary(): Promise<DashboardSummary>`. 주문 지표는 `COUNT(*) FILTER (...)`·`SUM(...) FILTER (...)`를 쓴 SQL 한 번으로, 재고 부족은 한 번 더 조회한다.
+  - `DashboardService.summary(): Promise<DashboardSummary>`. 주문 지표는 `COUNT(*) FILTER (...)`·`SUM(...) FILTER (...)`를 쓴 SQL 한 번으로 구하고, 재고 부족은 한 번 더 조회한다.
   - `GET /dashboard/summary` → `DashboardSummary`, `@Roles(Role.VIEWER)`
   - `orders."confirmedAt"` 인덱스 `IDX_orders_confirmed`. 마이그레이션은 TypeORM CLI로 생성한 뒤 검토한다.
 
@@ -256,7 +256,7 @@ it('viewer 200; no cookie 401 on both endpoints', ...);
   - 목: `dashboardSummaryFixture`, `salesTrendFixture(days)`(결정적, 일부 0인 날 포함, `to = '2026-11-21'`), `categorySalesFixture`(8개 카테고리), `dashboardHandlers`(잘못된 `days`면 400). `msw-server`의 기본 핸들러에 넣는다.
   - `<KpiCards />`
     - 4개 카드: 오늘 매출(`formatWon`), 오늘 주문(`N건`), 처리 대기(`pendingCount + toShipCount`건, 보조 "확정 대기 N · 출고 대기 N"), 재고 부족(`N개`).
-    - 오늘 매출·오늘 주문에는 전일 대비를 붙인다. `changeRate` 결과를 소수 1자리로 보이고, 증가는 "▲", 감소는 "▼" 기호를 함께 쓴다(색만으로 구분하지 않는다). `null`이면 "전일 실적 없음"이다.
+    - 오늘 매출·오늘 주문에는 전일 대비를 붙인다. `changeRate` 결과를 소수 1자리로 보이고, 증가는 "▲", 감소는 "▼" 기호를 함께 쓴다(색만으로 구분하지 않는다). `null`이면 "전일 실적 없음"을 보인다.
     - 처리 대기는 `/orders?status=PENDING`, 재고 부족은 `/products?lowStock=true`로 가는 링크다.
     - 로딩 중에는 카드 4개 모양의 스켈레톤, 에러면 메시지와 "다시 시도"(refetch)를 보인다.
 
@@ -341,7 +341,7 @@ it('empty items show 기간 내 매출이 없습니다', ...);
 - Consumes: `useOrders`·`OrderStatusBadge`·`DEFAULT_ORDER_*`(entities/order), `useProducts`·`DEFAULT_PRODUCT_*`(entities/product), `useUrlState`, `ToggleGroup`, `formatWon`, `formatKstDateTime`, 위젯(Task 3·4), `useSessionMe`
 - Produces:
   - `<RecentOrders />`: `useOrders({ ...기본값, size: 5, sort: 'createdAt:desc' })`. 행마다 주문번호(`/orders/:id` 링크), 고객명, 상태 뱃지, 금액, 접수 시각을 보인다. 머리에 "전체 보기" → `/orders` 링크를 둔다.
-  - `<LowStockTable />`: `useProducts({ ...기본값, lowStock: true, sort: 'stock:asc', size: 5 })`. 행마다 상품명(`/products/:id` 링크), SKU, 재고/안전재고를 보인다. 머리에 "전체 보기" → `/products?lowStock=true` 링크를 둔다. 비어 있으면 "재고 부족 상품이 없습니다"다.
+  - `<LowStockTable />`: `useProducts({ ...기본값, lowStock: true, sort: 'stock:asc', size: 5 })`. 행마다 상품명(`/products/:id` 링크), SKU, 재고/안전재고를 보인다. 머리에 "전체 보기" → `/products?lowStock=true` 링크를 둔다. 비어 있으면 "재고 부족 상품이 없습니다"를 보인다.
   - 두 위젯 모두 로딩 스켈레톤, 빈 상태, 에러와 "다시 시도"를 갖춘다.
   - `dashboardSchema`(zod): `days`는 `7|30|90`, 그 밖은 `.catch(30)`이다. 기본값이면 URL에서 지운다(`useUrlState` 규칙).
   - `DashboardPage`
@@ -395,6 +395,6 @@ it('tampered ?days=14 renders with 30 and requests days=30', ...);
 - [ ] **Step 4: (컨트롤러) 브라우저 수동 확인** (`pnpm db:seed` 데이터, 사용자 `pnpm dev`와 겹치지 않는 포트)
   - 뷰어로 로그인하면 대시보드의 KPI 4개, 차트 2개, 최근 주문, 재고 부족이 모두 그려진다.
   - 기간 토글이 `?days=`에 남고 새로고침해도 유지된다.
-  - 재고 부족 KPI 숫자와, 카드를 눌러 간 상품 목록의 총 건수가 같다.
+  - 재고 부족 KPI 숫자와 카드를 눌러 간 상품 목록의 총 건수가 같다.
   - 매니저로 PENDING 주문 하나를 확정하고 대시보드로 돌아오면, 오늘 매출과 처리 대기가 바로 바뀐다.
   - 콘솔에 hydration 오류와 recharts 경고가 없다.

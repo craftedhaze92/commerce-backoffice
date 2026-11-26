@@ -572,6 +572,6 @@ it('UsersPage renders rows from Paginated response', ...);
 
   끝에 데모 계정 표를 붙인다.
 
-- [ ] **Step 2: 로컬 전체 검증.** 저장소를 새 디렉토리에 클론해 README 순서대로만 실행한다. `localhost:3000`에서 admin으로 로그인할 수 있으면 성공이다. 이어서 루트에서 `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter api test:e2e && pnpm build` → 모두 PASS
+- [ ] **Step 2: 로컬 전체 검증.** 저장소를 새 디렉터리에 클론해 README 순서대로만 실행한다. `localhost:3000`에서 admin으로 로그인할 수 있으면 성공이다. 이어서 루트에서 `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter api test:e2e && pnpm build` → 모두 PASS
 - [ ] **Step 3: 커밋.** `chore: CI 워크플로와 로컬 실행 문서 추가`
 - [ ] **Step 4: (GitHub 원격이 있으면) 푸시한 뒤 Actions가 초록색인지 확인**
