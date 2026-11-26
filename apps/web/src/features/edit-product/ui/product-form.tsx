@@ -38,6 +38,8 @@ interface ProductFormProps {
   initial?: ProductDetail;
   readOnly?: boolean;
   onSubmitted?: (detail: ProductDetail) => void;
+  /** 있으면 저장 옆에 취소 버튼을 둔다(모달에서 닫기용). */
+  onCancel?: () => void;
 }
 
 function isFieldName(value: unknown): value is FieldName {
@@ -55,7 +57,13 @@ function fieldErrorsFrom(details: unknown): [FieldName, string][] {
   return result;
 }
 
-export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: ProductFormProps) {
+export function ProductForm({
+  mode,
+  initial,
+  readOnly = false,
+  onSubmitted,
+  onCancel,
+}: ProductFormProps) {
   const idPrefix = useId();
   const categories = useCategories();
   const save = useSaveProduct();
@@ -269,6 +277,11 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
             <span role="status" className="text-muted-foreground text-xs">
               {UPLOAD_PENDING_HINT}
             </span>
+          )}
+          {onCancel && (
+            <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
+              취소
+            </Button>
           )}
           <Button type="submit" size="lg" disabled={save.isPending || uploading || !hasChanges}>
             {save.isPending ? '저장 중...' : '저장'}

@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { Can } from '@/entities/session';
 import { toProductQueryString, useProducts } from '@/entities/product';
+import { CreateProductDialog } from '@/features/edit-product';
 import { ExportButton } from '@/features/export-excel';
 import {
   PRODUCT_PAGE_SIZES,
@@ -10,11 +10,9 @@ import {
   useProductListParams,
 } from '@/features/product-filter';
 import { ProductColumnMenu, ProductTable } from '@/widgets/product-table';
-import { buttonVariants } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { DataPagination } from '@/shared/ui/data-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { cn } from '@/shared/lib/utils';
 
 export function ProductListPage() {
   const [params, setParams] = useProductListParams();
@@ -37,9 +35,7 @@ export function ProductListPage() {
         <div className="flex flex-wrap items-center gap-2">
           <ExportButton resource="products" query={toProductQueryString(params)} />
           <Can permission="product:write">
-            <Link href="/products/new" className={cn(buttonVariants())}>
-              상품 등록
-            </Link>
+            <CreateProductDialog />
           </Can>
         </div>
       </header>

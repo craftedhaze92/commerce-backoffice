@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname, '../..'),
   },
   reactCompiler: true,
+  // 상품 등록은 목록의 모달로 옮겼다. 예전 주소로 들어오면 목록으로 보낸다
+  async redirects() {
+    return [{ source: '/products/new', destination: '/products', permanent: false }];
+  },
   async rewrites() {
     return [
       {

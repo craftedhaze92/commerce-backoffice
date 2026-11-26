@@ -87,10 +87,12 @@ describe('ProductListPage', () => {
     expect(seen).toEqual(['']);
   });
 
-  it('manager sees 상품 등록 linking to /products/new', async () => {
+  it('manager opens the 상품 등록 modal from the list without leaving the page', async () => {
     renderWithQuery(<ProductListPage />);
-    const link = await screen.findByRole('link', { name: '상품 등록' });
-    expect(link).toHaveAttribute('href', '/products/new');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '상품 등록' }));
+    expect(await screen.findByRole('dialog', { name: '상품 등록' })).toBeInTheDocument();
+    expect(navReplace).not.toHaveBeenCalled();
   });
 
   it('with ?q=크림&lowStock=true&sort=price:asc, 엑셀 다운로드 requests /api/v1/products/export with the same filters', async () => {
@@ -130,7 +132,7 @@ describe('ProductListPage', () => {
     useRole(Role.VIEWER);
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 1');
-    expect(screen.queryByRole('link', { name: '상품 등록' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '상품 등록' })).not.toBeInTheDocument();
   });
 
   it('typing alone does not search; Enter submits q once and resets page', async () => {

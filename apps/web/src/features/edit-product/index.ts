@@ -1,4 +1,5 @@
 export { ProductForm } from './ui/product-form';
+export { CreateProductDialog } from './ui/create-product-dialog';
 export { ImageUploader } from './ui/image-uploader';
 export {
   productFormSchema,

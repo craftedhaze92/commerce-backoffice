@@ -8,6 +8,7 @@ import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-
 import { server } from '@/shared/testing/msw-server';
 import { navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
 import { categoryFixtures, productDetailFixture } from '@/shared/api/mocks/products';
+import { CreateProductDialog } from '@/features/edit-product';
 import { ProductEditPage } from './product-edit-page';
 
 vi.mock('next/navigation', async () => {
@@ -92,6 +93,13 @@ const created = (body: Record<string, unknown> | undefined): ProductDetail => ({
   images: [],
 });
 
+/** 상품 등록 모달을 띄워 폼이 나올 때까지 기다린다. */
+async function openCreate(user: UserEvent) {
+  renderWithQuery(<CreateProductDialog />);
+  await user.click(screen.getByRole('button', { name: '상품 등록' }));
+  await screen.findByLabelText('SKU');
+}
+
 async function fillCreateForm(user: UserEvent) {
   await user.type(screen.getByLabelText('SKU'), ' new-001 ');
   await user.type(screen.getByLabelText('상품명'), '새 상품');
@@ -123,8 +131,7 @@ describe('ProductEditPage', () => {
       HttpResponse.json(created(b), { status: 201 }),
     );
     const user = userEvent.setup();
-    renderWithQuery(<ProductEditPage />);
-    await screen.findByLabelText('SKU');
+    await openCreate(user);
     await fillCreateForm(user);
     await user.upload(screen.getByLabelText('파일 선택'), [png('a.png'), png('b.png')]);
     const list = await screen.findByRole('list', { name: '등록된 이미지' });
@@ -135,7 +142,8 @@ describe('ProductEditPage', () => {
       .map((img) => img.getAttribute('src')?.replace('/media/uploads/thumb-', 'img-'));
 
     await user.click(screen.getByRole('button', { name: '저장' }));
-    await waitFor(() => expect(navReplace).toHaveBeenCalledWith('/products/new-id'));
+    // 등록에 성공하면 모달이 닫힌다
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(post.calls).toBe(1);
     expect(post.body).toEqual({
       sku: 'NEW-001',
@@ -185,13 +193,12 @@ describe('ProductEditPage', () => {
       ),
     );
     const user = userEvent.setup();
-    renderWithQuery(<ProductEditPage />);
-    await screen.findByLabelText('SKU');
+    await openCreate(user);
     await fillCreateForm(user);
     await user.click(screen.getByRole('button', { name: '저장' }));
     const error = await screen.findByText('이미 사용 중인 SKU입니다');
     expect(screen.getByLabelText('SKU')).toHaveAttribute('aria-describedby', error.id);
-    expect(navReplace).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: '상품 등록' })).toBeInTheDocument();
   });
 
   it('400 details map to field errors', async () => {
@@ -210,8 +217,7 @@ describe('ProductEditPage', () => {
       ),
     );
     const user = userEvent.setup();
-    renderWithQuery(<ProductEditPage />);
-    await screen.findByLabelText('SKU');
+    await openCreate(user);
     await fillCreateForm(user);
     await user.click(screen.getByRole('button', { name: '저장' }));
     const errors = await screen.findAllByText('값을 확인해 주세요');
@@ -246,9 +252,9 @@ describe('ProductEditPage', () => {
     expect(navReplace).not.toHaveBeenCalled();
   });
 
-  it('viewer sees read-only detail without save/delete; /products/new redirects viewer to /forbidden', async () => {
+  it('viewer sees read-only detail without save/delete', async () => {
     useRole(Role.VIEWER);
-    const { unmount } = renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
+    renderWithQuery(<ProductEditPage id={productDetailFixture.id} />);
     const name = await screen.findByLabelText('상품명');
     await waitFor(() => expect(name).toBeDisabled());
     expect(screen.getByLabelText('가격')).toBeDisabled();
@@ -257,12 +263,24 @@ describe('ProductEditPage', () => {
     expect(screen.queryByRole('button', { name: '상품 삭제' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('파일 선택')).not.toBeInTheDocument();
     expect(screen.getAllByRole('img')).toHaveLength(2);
-    unmount();
+  });
 
-    renderWithQuery(<ProductEditPage />);
-    await waitFor(() => expect(navReplace).toHaveBeenCalledWith('/forbidden'));
-    expect(navReplace).toHaveBeenCalledTimes(1);
-    expect(screen.queryByLabelText('SKU')).not.toBeInTheDocument();
+  it('create dialog closes with 취소 or the close button and discards what was typed', async () => {
+    const user = userEvent.setup();
+    await openCreate(user);
+    await user.type(screen.getByLabelText('상품명'), '버릴 상품');
+    await user.click(screen.getByRole('button', { name: '취소' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '상품 등록' }));
+    expect(await screen.findByLabelText('상품명')).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: '닫기' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '상품 등록' }));
+    await screen.findByLabelText('상품명');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('delete confirms, calls DELETE, navigates to /products', async () => {
@@ -308,8 +326,7 @@ describe('ProductEditPage', () => {
       HttpResponse.json(created(b), { status: 201 }),
     );
     const user = userEvent.setup();
-    renderWithQuery(<ProductEditPage />);
-    await screen.findByLabelText('SKU');
+    await openCreate(user);
     await fillCreateForm(user);
     expect(screen.queryByText(UPLOAD_HINT)).not.toBeInTheDocument();
     await user.upload(screen.getByLabelText('파일 선택'), [png('held.png')]);

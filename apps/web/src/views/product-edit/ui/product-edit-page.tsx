@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
@@ -16,12 +16,12 @@ import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 
 interface ProductEditPageProps {
-  /** 없으면 등록 화면이다. */
-  id?: string;
+  id: string;
 }
 
+/** 상품 상세·수정 화면. 등록은 상품 목록의 모달(`CreateProductDialog`)에서 한다. */
 export function ProductEditPage({ id }: ProductEditPageProps) {
-  return id === undefined ? <CreateProduct /> : <EditProduct id={id} />;
+  return <EditProduct id={id} />;
 }
 
 /** 상품 폼과 같은 2열 라벨·입력 배치의 로딩 자리. 불러온 뒤 화면이 흔들리지 않게 크기를 맞춘다. */
@@ -42,33 +42,6 @@ function FormSkeleton() {
       </div>
       <Skeleton className="ml-auto h-12 w-20 rounded-xl" />
     </div>
-  );
-}
-
-function CreateProduct() {
-  const router = useRouter();
-  const me = useSessionMe();
-  const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
-  const forbidden = me.data !== undefined && !canWrite;
-
-  useEffect(() => {
-    if (forbidden) router.replace('/forbidden');
-  }, [forbidden, router]);
-
-  return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-title">상품 등록</h1>
-      {canWrite ? (
-        <div className="sheet max-w-3xl p-4 md:p-8">
-          <ProductForm
-            mode="create"
-            onSubmitted={(detail) => router.replace(`/products/${detail.id}`)}
-          />
-        </div>
-      ) : (
-        !forbidden && <FormSkeleton />
-      )}
-    </section>
   );
 }
 
