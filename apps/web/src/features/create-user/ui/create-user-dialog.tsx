@@ -7,6 +7,7 @@ import { Role, USER_LIMITS } from '@bo/contracts';
 import { ApiError, errorMessage } from '@/shared/api';
 import { ROLE_LABEL } from '@/shared/lib/role-label';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,6 @@ function FieldError({ message }: { message?: string }) {
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
-  const [added, setAdded] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const create = useCreateUser();
   const {
@@ -61,14 +61,9 @@ export function CreateUserDialog() {
 
   return (
     <div className="flex items-center gap-3">
-      {added && (
-        <span role="status" className="text-muted-foreground text-sm">
-          사용자를 추가했습니다
-        </span>
-      )}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogTrigger asChild>
-          <Button onClick={() => setAdded(false)}>사용자 추가</Button>
+          <Button>사용자 추가</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -83,7 +78,7 @@ export function CreateUserDialog() {
                 onSuccess: () => {
                   reset(DEFAULTS);
                   setOpen(false);
-                  setAdded(true);
+                  toast('사용자를 추가했습니다');
                 },
                 onError: (error) => {
                   if (

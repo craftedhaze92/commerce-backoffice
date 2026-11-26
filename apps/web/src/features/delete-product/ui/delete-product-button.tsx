@@ -12,6 +12,7 @@ import {
   AlertDialogTrigger,
 } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import { useDeleteProduct } from '../model/use-delete-product';
 
 interface DeleteProductButtonProps {
@@ -55,6 +56,7 @@ export function DeleteProductButton({ id, name, onDeleted }: DeleteProductButton
               remove.mutate(id, {
                 onSuccess: () => {
                   setOpen(false);
+                  toast('상품을 삭제했습니다');
                   onDeleted();
                 },
               })

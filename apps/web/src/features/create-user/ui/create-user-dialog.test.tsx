@@ -57,7 +57,7 @@ describe('CreateUserDialog', () => {
     await user.selectOptions(screen.getByLabelText('역할'), '매니저');
     await user.type(screen.getByLabelText('초기 비밀번호'), 'password1!');
     await user.click(screen.getByRole('button', { name: '추가' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('사용자를 추가했습니다');
+    expect(await screen.findByText('사용자를 추가했습니다')).toBeInTheDocument();
     expect(body).toEqual({
       email: 'new@example.com',
       name: '새 사용자',

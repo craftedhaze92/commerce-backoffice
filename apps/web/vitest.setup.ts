@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { resetOrderMocks } from './src/shared/api/mocks/orders';
 import { server } from './src/shared/testing/msw-server';
+import { resetToasts } from './src/shared/ui/toast';
 
 /**
  * jsdom에는 ResizeObserver가 없다.
@@ -43,3 +44,6 @@ afterEach(() => {
   resetOrderMocks();
 });
 afterAll(() => server.close());
+
+// 한 테스트에서 띄운 토스트가 다음 테스트 화면에 남지 않게 비운다.
+afterEach(() => resetToasts());
