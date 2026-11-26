@@ -191,8 +191,7 @@ function DateRange({ from, to, onCommit }: DateRangeProps) {
           return (
             <Button
               key={p.kind}
-              variant={active ? 'secondary' : 'outline'}
-              size="sm"
+              variant={active ? 'weak' : 'secondary'}
               aria-pressed={active}
               onClick={() => onCommit(range)}
             >
@@ -201,8 +200,7 @@ function DateRange({ from, to, onCommit }: DateRangeProps) {
           );
         })}
         <Button
-          variant={!from && !to ? 'secondary' : 'outline'}
-          size="sm"
+          variant={!from && !to ? 'weak' : 'secondary'}
           aria-pressed={!from && !to}
           onClick={() => onCommit({ from: undefined, to: undefined })}
         >

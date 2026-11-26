@@ -66,7 +66,7 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
         onCommit={(patch) => onChange(patch)}
       />
       <Toggle
-        variant="outline"
+        className="bg-canvas"
         pressed={params.lowStock}
         onPressedChange={(pressed) => onChange({ lowStock: pressed })}
         aria-label="재고 부족만"

@@ -75,9 +75,19 @@ export function AdminSidebar() {
       </SidebarContent>
       <SidebarFooter>
         {me && (
-          <div className="flex items-center gap-2 px-3">
-            <span className="truncate text-[15px] font-semibold">{me.name}</span>
-            <Badge variant="secondary">{ROLE_LABEL[me.role]}</Badge>
+          <div className="flex items-center gap-3 px-3 py-2">
+            <span
+              aria-hidden
+              className="bg-brand-weak text-accent-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
+            >
+              {me.name.slice(0, 1)}
+            </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] font-semibold">{me.name}</span>
+              <span className="text-muted-foreground text-[13px] font-medium">
+                {ROLE_LABEL[me.role]}
+              </span>
+            </div>
           </div>
         )}
         <LogoutButton />

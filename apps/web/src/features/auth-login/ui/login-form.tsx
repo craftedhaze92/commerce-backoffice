@@ -120,14 +120,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {login.isPending ? '로그인 중...' : '로그인'}
       </Button>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">데모 계정</span>
+        <span className="text-muted-foreground text-[13px] font-medium">데모 계정으로 채우기</span>
         <div className="flex gap-2">
           {DEMO_ACCOUNTS.map(({ label, email }) => (
             <Button
               key={email}
               type="button"
-              variant="outline"
-              size="sm"
+              variant="secondary"
               className="flex-1"
               onClick={() => fillDemo(email)}
             >
