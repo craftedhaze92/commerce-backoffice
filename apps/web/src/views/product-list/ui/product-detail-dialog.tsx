@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { can } from '@bo/contracts';
 import { useProduct } from '@/entities/product';
 import { useSessionMe } from '@/entities/session';
@@ -13,21 +11,47 @@ import { InventoryHistory } from '@/widgets/inventory-history';
 import { ApiError } from '@/shared/api';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-interface ProductEditPageProps {
-  id: string;
+interface ProductDetailDialogProps {
+  /** 열 상품 id. 없으면 모달이 닫혀 있다. */
+  id: string | undefined;
+  onClose: () => void;
 }
 
-/** 상품 상세·수정 화면. 등록은 상품 목록의 모달(`CreateProductDialog`)에서 한다. */
-export function ProductEditPage({ id }: ProductEditPageProps) {
-  return <EditProduct id={id} />;
+/**
+ * 상품 상세·수정 모달. 목록 위에서 열리고 닫기(X)·Esc로 닫는다.
+ * 수정 중인 내용을 실수로 잃지 않도록 바깥 클릭으로는 닫지 않는다.
+ */
+export function ProductDetailDialog({ id, onClose }: ProductDetailDialogProps) {
+  return (
+    <Dialog
+      open={id !== undefined}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        {id !== undefined && <ProductDetail id={id} onClose={onClose} />}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 /** 상품 폼과 같은 2열 라벨·입력 배치의 로딩 자리. 불러온 뒤 화면이 흔들리지 않게 크기를 맞춘다. */
 function FormSkeleton() {
   return (
-    <div className="sheet flex max-w-3xl flex-col gap-5 p-4 md:p-8" aria-busy="true">
+    <div className="flex flex-col gap-5" aria-busy="true">
       <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex flex-col gap-2">
@@ -45,8 +69,7 @@ function FormSkeleton() {
   );
 }
 
-function EditProduct({ id }: { id: string }) {
-  const router = useRouter();
+function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const me = useSessionMe();
   const product = useProduct(id);
   const canWrite = me.data !== undefined && can(me.data.role, 'product:write');
@@ -57,58 +80,61 @@ function EditProduct({ id }: { id: string }) {
   // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
   if (product.isPending || me.isPending) {
     return (
-      <section className="flex flex-col gap-6">
-        <Skeleton className="h-7 w-48" />
+      <>
+        <DialogHeader>
+          <DialogTitle className="sr-only">상품 불러오는 중</DialogTitle>
+          <Skeleton className="h-7 w-48" />
+        </DialogHeader>
         <FormSkeleton />
-      </section>
+      </>
     );
   }
 
   if (product.isError) {
     const notFound = product.error instanceof ApiError && product.error.status === 404;
     return (
-      <section role="alert" className="flex flex-col items-start gap-3 py-8">
-        <p className="text-sm">
-          {notFound ? '상품을 찾을 수 없습니다' : '상품을 불러오지 못했습니다'}
-        </p>
-        {notFound ? (
-          <Button asChild variant="outline">
-            <Link href="/products">목록으로</Link>
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={() => void product.refetch()}>
-            다시 시도
-          </Button>
-        )}
-      </section>
+      <>
+        <DialogHeader>
+          <DialogTitle>상품 상세</DialogTitle>
+        </DialogHeader>
+        <div role="alert" className="flex flex-col items-start gap-3 py-4">
+          <p className="text-[15px]">
+            {notFound ? '상품을 찾을 수 없습니다' : '상품을 불러오지 못했습니다'}
+          </p>
+          {notFound ? (
+            <Button variant="secondary" onClick={onClose}>
+              닫기
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => void product.refetch()}>
+              다시 시도
+            </Button>
+          )}
+        </div>
+      </>
     );
   }
 
   const detail = product.data;
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-title">{detail.name}</h1>
-        {canWrite && (
-          <DeleteProductButton
-            id={detail.id}
-            name={detail.name}
-            onDeleted={() => router.replace('/products')}
-          />
-        )}
-      </header>
-      <div className="sheet max-w-3xl p-4 md:p-8">
-        <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
-      </div>
+    <>
+      <DialogHeader className="flex-row items-center justify-between gap-3 pr-8">
+        <div className="flex min-w-0 flex-col gap-1">
+          <DialogTitle className="truncate">{detail.name}</DialogTitle>
+          <DialogDescription>{detail.sku}</DialogDescription>
+        </div>
+        {canWrite && <DeleteProductButton id={detail.id} name={detail.name} onDeleted={onClose} />}
+      </DialogHeader>
+      <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
       <section
         aria-labelledby="inventory-heading"
-        className="sheet flex max-w-3xl flex-col gap-4 p-4 md:p-8"
+        className="border-canvas flex flex-col gap-4 border-t-2 pt-5"
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h2 id="inventory-heading" className="text-section">
+            <h3 id="inventory-heading" className="text-section">
               재고
-            </h2>
+            </h3>
             <span className="text-muted-strong text-[15px] font-medium">
               현재 재고 {detail.stock}개 · 안전 재고 {detail.safetyStock}개
             </span>
@@ -124,6 +150,6 @@ function EditProduct({ id }: { id: string }) {
         </div>
         <InventoryHistory key={historyKey} productId={detail.id} />
       </section>
-    </section>
+    </>
   );
 }

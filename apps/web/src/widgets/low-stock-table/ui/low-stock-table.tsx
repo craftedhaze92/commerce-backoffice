@@ -48,7 +48,7 @@ export function LowStockTable() {
             <li key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
               <div className="flex min-w-0 flex-col gap-0.5">
                 <Link
-                  href={`/products/${p.id}`}
+                  href={`/products?detail=${p.id}`}
                   className="truncate font-medium hover:underline focus-visible:underline"
                 >
                   {p.name}

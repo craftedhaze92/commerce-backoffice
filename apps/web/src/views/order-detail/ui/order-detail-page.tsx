@@ -111,7 +111,7 @@ export function OrderDetailPage({ id }: { id: string }) {
                       </Badge>
                     </span>
                   ) : (
-                    <Link href={`/products/${item.productId}`} className="hover:underline">
+                    <Link href={`/products?detail=${item.productId}`} className="hover:underline">
                       {item.productName}
                     </Link>
                   )}

@@ -39,7 +39,7 @@ describe('ProductTable', () => {
     expect(rows).toHaveLength(6);
     expect(screen.getByRole('link', { name: '테스트 상품 1' })).toHaveAttribute(
       'href',
-      `/products/${productFixtures[0].id}`,
+      `/products?detail=${productFixtures[0].id}`,
     );
     expect(screen.getByText('SKU-0001')).toBeInTheDocument();
     expect(screen.getByText('₩11,000')).toBeInTheDocument();

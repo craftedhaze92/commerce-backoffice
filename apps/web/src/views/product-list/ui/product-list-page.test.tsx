@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
@@ -8,6 +8,7 @@ import { createTestQueryClient, renderWithQuery } from '@/shared/testing/render-
 import { REVOKE_DELAY_MS } from '@/shared/lib/save-blob';
 import { server } from '@/shared/testing/msw-server';
 import { getMockSearch, navReplace, setMockSearch } from '@/shared/testing/mock-navigation';
+import { productDetailFixture } from '@/shared/api/mocks/products';
 import { ProductListPage } from './product-list-page';
 
 vi.mock('next/navigation', async () => {
@@ -126,6 +127,29 @@ describe('ProductListPage', () => {
     );
     await waitFor(() => expect(client.isFetching()).toBe(0));
     expect(screen.queryByRole('button', { name: '엑셀 다운로드' })).not.toBeInTheDocument();
+  });
+
+  it('?detail=<id> opens the detail modal over the list; 닫기 drops only detail and keeps filters', async () => {
+    setMockSearch(`q=테스트&page=2&detail=${productDetailFixture.id}`);
+    renderWithQuery(<ProductListPage />);
+    const dialog = await screen.findByRole('dialog', { name: productDetailFixture.name });
+    expect(within(dialog).getByLabelText('상품명')).toHaveValue(productDetailFixture.name);
+    await userEvent.setup().click(within(dialog).getByRole('button', { name: '닫기' }));
+    expect(Object.fromEntries(new URLSearchParams(getMockSearch()))).toEqual({
+      q: '테스트',
+      page: '2',
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('product name links add detail to the current query instead of leaving the list', async () => {
+    setMockSearch('status=ON_SALE');
+    renderWithQuery(<ProductListPage />);
+    const link = await screen.findByRole('link', { name: '테스트 상품 1' });
+    const href = new URL(link.getAttribute('href')!, 'http://x');
+    expect(href.pathname).toBe('/products');
+    expect(href.searchParams.get('status')).toBe('ON_SALE');
+    expect(href.searchParams.get('detail')).toBeTruthy();
   });
 
   it('viewer does not see 상품 등록', async () => {

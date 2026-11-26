@@ -10,12 +10,16 @@ import {
   useProductListParams,
 } from '@/features/product-filter';
 import { ProductColumnMenu, ProductTable } from '@/widgets/product-table';
+import { useQueryParam } from '@/shared/lib/url-state';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { ProductDetailDialog } from './product-detail-dialog';
 import { DataPagination } from '@/shared/ui/data-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 
 export function ProductListPage() {
   const [params, setParams] = useProductListParams();
+  // 상세는 목록 위 모달로 연다. 새로고침·링크 공유에도 유지되도록 URL(`?detail=<id>`)에 둔다
+  const [detailId, setDetailId] = useQueryParam('detail');
   const products = useProducts(params);
   const meta = products.data?.meta;
 
@@ -69,6 +73,7 @@ export function ProductListPage() {
           />
         </div>
       </div>
+      <ProductDetailDialog id={detailId} onClose={() => setDetailId(undefined)} />
     </section>
   );
 }

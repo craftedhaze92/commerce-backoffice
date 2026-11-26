@@ -278,7 +278,10 @@ describe('OrderDetailPage', () => {
   it('items table links products and totals = sum of subtotals', async () => {
     renderWithQuery(<OrderDetailPage id={ID} />);
     const link = await screen.findByRole('link', { name: orderDetailFixture.items[0].productName });
-    expect(link).toHaveAttribute('href', `/products/${orderDetailFixture.items[0].productId}`);
+    expect(link).toHaveAttribute(
+      'href',
+      `/products?detail=${orderDetailFixture.items[0].productId}`,
+    );
     const sum = orderDetailFixture.items.reduce((s, i) => s + i.subtotal, 0);
     expect(sum).toBe(orderDetailFixture.totalAmount);
     const totalRow = screen.getByRole('row', { name: /합계/ });
