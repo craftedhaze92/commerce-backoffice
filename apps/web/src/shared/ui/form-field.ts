@@ -7,9 +7,9 @@
  * Shadcn `Input`·`SelectTrigger`의 기본 스타일 위에 cn()으로 덮어쓴다.
  */
 
-/** 시안의 입력 필드 스펙: 14px, radius 10px, 헤어라인 테두리, 포커스 시 브랜드 컬러 */
+/** 입력 필드 스펙: 15px, radius 12px, 테두리 없는 회색 채움, 포커스 시 흰 바탕과 브랜드 컬러 테두리 */
 export const FORM_FIELD =
-  'border-hairline focus-visible:border-brand h-auto rounded-[10px] border px-3 py-2.5 text-sm focus-visible:ring-0';
+  'bg-canvas hover:bg-track focus-visible:bg-card focus-visible:border-brand h-10 rounded-lg border border-transparent px-3.5 text-[15px] font-medium focus-visible:ring-0';
 
 /** 라벨과 입력칸을 세로로 쌓는 래퍼. 라벨 글자는 작고 흐리게 둔다 */
-export const FORM_LABEL = 'text-muted-foreground flex flex-col gap-1.5 text-xs font-semibold';
+export const FORM_LABEL = 'text-muted-strong flex flex-col gap-1.5 text-[13px] font-semibold';
