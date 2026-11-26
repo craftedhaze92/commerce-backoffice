@@ -33,7 +33,7 @@
 
 1. Neon에서 프로젝트를 만든다. Postgres 버전은 **16**, 리전은 Render 서비스와 가까운 곳(예: AWS Singapore 또는 US East)을 고른다.
 2. 프로젝트 대시보드의 **Connect**에서 접속 문자열을 복사한다.
-   - **Pooled connection은 끈다**(직접 연결 문자열, 호스트에 `-pooler`가 없는 것). 데모 사용자 생성 제한이 트랜잭션 단위 advisory lock을 쓰고, api가 자체 커넥션 풀을 가진다.
+   - **Pooled connection은 끈다**(직접 연결 문자열, 호스트에 `-pooler`가 없는 것). 데모 사용자 생성 제한이 트랜잭션 단위 advisory lock을 쓰고 api에는 자체 커넥션 풀이 있다.
    - 형태: `postgresql://<user>:<password>@<endpoint>.<region>.aws.neon.tech/<db>?sslmode=require`
    - 이 값이 `DATABASE_URL`이다. `sslmode=require`를 지우지 않는다.
 
@@ -41,7 +41,7 @@
 
 Render Free에는 Pre-deploy Command와 셸이 없다. 마이그레이션은 api 시작 명령에서 매번 돌지만(2단계), **시드는 로컬에서 한 번** 넣는다. 데모 데이터는 계정 3개, 카테고리·상품, 주문 1,500건이다. 시드는 멱등이라 다시 돌려도 중복되지 않는다.
 
-저장소 루트에서 실행한다. 셸에서 준 `DATABASE_URL`이 루트 `.env`의 값보다 우선한다. 나머지 값(`JWT_SECRET`, `SEED_PASSWORD` 등)은 로컬 `.env`에서 읽는다. URL에 `?`와 `&`가 있으므로 작은따옴표로 감싼다.
+저장소 루트에서 실행한다. 셸에서 지정한 `DATABASE_URL`이 루트 `.env`의 값보다 우선한다. 나머지 값(`JWT_SECRET`, `SEED_PASSWORD` 등)은 로컬 `.env`에서 읽는다. URL에 `?`와 `&`가 있으므로 작은따옴표로 감싼다.
 
 ```bash
 pnpm --filter @bo/contracts build && pnpm --filter api build
@@ -99,7 +99,7 @@ DATABASE_URL='<Neon 접속 문자열>' pnpm --filter api db:seed
 
 `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE`은 넣지 않는다. 기동할 때 저장소에 접속하지 않으므로 자리 값으로도 api는 정상 동작한다. 이 상태에서 상품 이미지를 올리면 저장에 실패해 에러가 난다. 시드 데이터에는 이미지가 없으므로 다른 화면에는 영향이 없다.
 
-로그인 시도 카운터는 프로세스 메모리에 둔다(`@nestjs/throttler` 기본 저장소). api 인스턴스가 하나일 때만 정확하고, 재시작하거나 잠들었다 깨면 초기화된다.
+로그인 시도 카운터는 프로세스 메모리에 둔다(`@nestjs/throttler` 기본 저장소). api 인스턴스가 하나일 때만 정확하고 재시작하거나 잠들었다 깨면 초기화된다.
 
 ## 3. Vercel (apps/web)
 
@@ -114,7 +114,7 @@ DATABASE_URL='<Neon 접속 문자열>' pnpm --filter api db:seed
 
    `apps/web/next.config.ts`의 rewrite 대상이다. rewrite는 빌드할 때 정해지므로 값을 바꾸면 **다시 배포(재빌드)**해야 한다. 이미지 저장소를 쓰지 않으면 `MEDIA_ORIGIN`은 넣지 않는다.
 
-5. 배포가 끝나면 나온 주소(`https://<vercel-app>.vercel.app`)를 Render api의 `WEB_ORIGIN`에 넣는다. 환경 변수를 저장하면 Render가 다시 배포한다.
+5. 배포가 끝나면 나오는 주소(`https://<vercel-app>.vercel.app`)를 Render api의 `WEB_ORIGIN`에 넣는다. 환경 변수를 저장하면 Render가 다시 배포한다.
 
 ## 4. 배포 후 점검 목록
 
@@ -136,7 +136,7 @@ Vercel 주소에서 확인한다. api가 잠들어 있으면 첫 요청이 느�
 - 너무 작으면 `req.ip`가 프록시 주소가 된다. 모든 사용자가 같은 IP로 묶여, 한 사람이 어떤 이메일로 제한을 넘기면 그 이메일은 모든 사용자에게 막힌다.
 - 너무 크면 클라이언트가 보낸 `X-Forwarded-For` 값을 믿게 된다. 헤더를 바꿔 가며 제한을 우회할 수 있다.
 
-이 구성은 요청이 Vercel과 Render 앞단 프록시를 거쳐 오므로 1보다 클 가능성이 크다. 추측하지 말고 아래처럼 확인한다.
+이 구성에서는 요청이 Vercel과 Render 앞단 프록시를 거쳐 오므로 홉 수가 1보다 클 가능성이 높다. 추측하지 말고 아래처럼 확인한다.
 
 1. `TRUST_PROXY=1`로 배포한 상태에서, `apps/api/src/main.ts`의 `configureApp(app, env);` 바로 아래에 **임시로** 로그를 넣고 배포한다.
 
@@ -162,7 +162,7 @@ Vercel 주소에서 확인한다. api가 잠들어 있으면 첫 요청이 느�
 
 1. Cloudflare 대시보드 → **R2 Object Storage**에서 구독을 활성화하고 버킷을 만든다. 예: `bo-media`. 스토리지 클래스는 무료 한도가 적용되는 **Standard**다. 이 이름이 `S3_BUCKET`이다.
 2. 버킷 → **Settings → Public access**에서 `r2.dev` 서브도메인을 허용한다. 주소는 `https://pub-<hash>.r2.dev` 형태이고, 이 값이 Vercel의 `MEDIA_ORIGIN`이다. 공개 URL은 버킷 루트를 가리키므로 뒤에 버킷 이름을 붙이지 않는다.
-3. **R2 → Manage R2 API Tokens → Create API token**에서 권한 **Object Read & Write**, 대상은 위 버킷 하나로 제한한 토큰을 만든다. 생성 화면에 한 번만 보이는 값을 옮겨 둔다.
+3. **R2 → Manage R2 API Tokens → Create API token**에서 권한은 **Object Read & Write**, 대상은 위 버킷 하나로 제한한 토큰을 만든다. 생성 화면에 한 번만 보이는 값을 옮겨 둔다.
 4. Render api 환경 변수를 바꾼다.
 
    | 변수                   | 값                                              |
@@ -176,4 +176,4 @@ Vercel 주소에서 확인한다. api가 잠들어 있으면 첫 요청이 느�
 
 5. Vercel에 `MEDIA_ORIGIN=https://pub-<hash>.r2.dev`를 추가하고 다시 배포한다.
 
-이미지를 쓰면 고아 이미지 정리 크론이 의미를 갖는다. Render Free는 잠들어 있는 동안 크론이 돌지 않으므로, 정리는 api가 깨어 있는 날의 04:00 KST에만 일어난다.
+이미지를 쓰면 고아 이미지 정리 크론이 제 역할을 한다. Render Free는 잠들어 있는 동안 크론이 돌지 않으므로, 정리는 api가 깨어 있는 날의 04:00 KST에만 일어난다.
