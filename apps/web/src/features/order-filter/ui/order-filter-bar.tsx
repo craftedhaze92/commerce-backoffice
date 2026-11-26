@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { ORDER_LIMITS, OrderStatus } from '@bo/contracts';
 import { ORDER_STATUS_LABEL, type OrderListParams } from '@/entities/order';
 import { kstPreset, kstToday, type KstPresetKind } from '@/shared/lib/date-range';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { SearchButton, SearchField } from '@/shared/ui/search-field';
 import { DatePicker } from '@/shared/ui/date-picker';
-import { Input } from '@/shared/ui/input';
 import type { OrderListPatch } from '../model/order-list-params';
 
-const SEARCH_DEBOUNCE_MS = 300;
 export const DATE_RANGE_ERROR = '시작일이 종료일보다 늦을 수 없습니다';
 
 const PRESETS: { kind: KstPresetKind; label: string }[] = [
@@ -25,14 +24,23 @@ interface OrderFilterBarProps {
 }
 
 export function OrderFilterBar({ params, onChange }: OrderFilterBarProps) {
-  // 초기화 시 SearchInput을 다시 마운트해 입력 중인 글자와 대기 중인 디바운스를 함께 버린다
+  // 초기화 시 검색 입력을 다시 마운트해 제출하지 않은 글자도 함께 버린다
   const [resetKey, setResetKey] = useState(0);
+  const searchFormId = useId();
 
   return (
     <div className="flex flex-col gap-3">
       <StatusTabs status={params.status} onChange={(status) => onChange({ status })} />
-      <div className="flex flex-wrap items-start gap-3">
-        <SearchInput key={resetKey} q={params.q} onCommit={(q) => onChange({ q })} />
+      <div className="flex flex-wrap items-start gap-2">
+        <SearchField
+          formId={searchFormId}
+          key={resetKey}
+          value={params.q}
+          onSearch={(q) => onChange({ q })}
+          label="주문 검색"
+          placeholder="주문번호 또는 고객명"
+          maxLength={ORDER_LIMITS.qMax}
+        />
         <DateRange from={params.from} to={params.to} onCommit={onChange} />
         <Button
           variant="ghost"
@@ -43,6 +51,7 @@ export function OrderFilterBar({ params, onChange }: OrderFilterBarProps) {
         >
           초기화
         </Button>
+        <SearchButton form={searchFormId} />
       </div>
     </div>
   );
@@ -86,50 +95,6 @@ function StatusTabs({
         );
       })}
     </div>
-  );
-}
-
-/**
- * 입력 중인 글자는 컴포넌트가 들고 있고, 300ms 멈추면 한 번만 URL에 쓴다.
- * URL 값이 바뀌었을 때 그것이 방금 우리가 쓴 값이 아닐 때만(예: 초기화) 입력창을 맞춘다.
- */
-function SearchInput({ q, onCommit }: { q: string; onCommit: (q: string) => void }) {
-  const [text, setText] = useState(q);
-  const [committed, setCommitted] = useState(q);
-  const [seenUrlQ, setSeenUrlQ] = useState(q);
-
-  if (q !== seenUrlQ) {
-    setSeenUrlQ(q);
-    if (q !== committed) {
-      setCommitted(q);
-      setText(q);
-    }
-  }
-
-  const onCommitRef = useRef(onCommit);
-  useEffect(() => {
-    onCommitRef.current = onCommit;
-  });
-
-  useEffect(() => {
-    if (text === committed) return;
-    const timer = setTimeout(() => {
-      setCommitted(text);
-      onCommitRef.current(text);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [text, committed]);
-
-  return (
-    <Input
-      type="search"
-      aria-label="주문 검색"
-      placeholder="주문번호 또는 고객명"
-      className="w-56"
-      value={text}
-      maxLength={ORDER_LIMITS.qMax}
-      onChange={(e) => setText(e.target.value)}
-    />
   );
 }
 

@@ -58,7 +58,7 @@ export function DatePicker({
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           className={cn(
-            'w-40 justify-between px-3.5 font-medium tabular-nums',
+            'w-36 justify-between px-3.5 font-medium tabular-nums',
             !value && 'text-muted-foreground',
             className,
           )}

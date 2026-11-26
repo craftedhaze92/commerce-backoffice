@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Role } from '@bo/contracts';
@@ -133,47 +133,52 @@ describe('ProductListPage', () => {
     expect(screen.queryByRole('link', { name: '상품 등록' })).not.toBeInTheDocument();
   });
 
-  it('typing in search updates URL once after 300ms with page reset', async () => {
+  it('typing alone does not search; Enter submits q once and resets page', async () => {
     setMockSearch('page=2');
+    const seen: string[] = [];
+    server.use(
+      http.get('/api/v1/products', ({ request }) => {
+        seen.push(new URL(request.url).search);
+        return undefined;
+      }),
+    );
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 21');
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      const input = screen.getByRole('searchbox', { name: '상품 검색' });
-      await user.type(input, '상품 3');
-      expect(input).toHaveValue('상품 3');
-      expect(navReplace).not.toHaveBeenCalled();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(navReplace).toHaveBeenCalledTimes(1);
-      expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
-      expect(getMockSearch()).not.toContain('page=');
-      expect(input).toHaveValue('상품 3');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    const input = screen.getByRole('searchbox', { name: '상품 검색' });
+    await user.type(input, '상품 3');
+    // 디바운스 시간이 지나도 입력만으로는 요청하지 않는다
+    await new Promise((r) => setTimeout(r, 400));
+    expect(navReplace).not.toHaveBeenCalled();
+    expect(seen.some((q) => q.includes('q='))).toBe(false);
+    await user.keyboard('{Enter}');
+    expect(navReplace).toHaveBeenCalledTimes(1);
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
+    expect(getMockSearch()).not.toContain('page=');
+    expect(input).toHaveValue('상품 3');
+    await waitFor(() =>
+      expect(seen.some((q) => new URLSearchParams(q).get('q') === '상품 3')).toBe(true),
+    );
   });
 
-  it('초기화 cancels a pending search debounce even when URL q is empty', async () => {
+  it('검색 button submits the trimmed query', async () => {
     renderWithQuery(<ProductListPage />);
     await screen.findByText('테스트 상품 1');
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), 'a');
-      await user.click(screen.getByRole('button', { name: '초기화' }));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(getMockSearch()).toBe('');
-      expect(screen.getByRole('searchbox', { name: '상품 검색' })).toHaveValue('');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), '  상품 3  ');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('상품 3');
   });
 
+  it('초기화 discards text that was typed but not submitted', async () => {
+    renderWithQuery(<ProductListPage />);
+    await screen.findByText('테스트 상품 1');
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '상품 검색' }), 'a');
+    await user.click(screen.getByRole('button', { name: '초기화' }));
+    expect(getMockSearch()).toBe('');
+    expect(screen.getByRole('searchbox', { name: '상품 검색' })).toHaveValue('');
+  });
   it('selecting status writes ?status=ON_SALE and requests it', async () => {
     const seen = recordProductRequests();
     renderWithQuery(<ProductListPage />);

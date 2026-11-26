@@ -44,10 +44,7 @@ export function ProductListPage() {
         </div>
       </header>
       <div className="sheet flex flex-col gap-5 p-4 md:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <ProductFilterBar params={params} onChange={setParams} />
-          <ProductColumnMenu />
-        </div>
+        <ProductFilterBar params={params} onChange={setParams} trailing={<ProductColumnMenu />} />
         <ProductTable
           data={products.data?.items}
           isPending={products.isPending}

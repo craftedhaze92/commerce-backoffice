@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { OrderStatus, Role, type OrderListItem } from '@bo/contracts';
@@ -195,44 +195,52 @@ describe('OrderListPage', () => {
     });
   });
 
-  it('search debounce writes q once after 300ms', async () => {
+  it('typing alone does not search; Enter submits q once and resets page', async () => {
     setMockSearch('page=2');
+    const seen: string[] = [];
+    server.use(
+      http.get('/api/v1/orders', ({ request }) => {
+        seen.push(new URL(request.url).search);
+        return undefined;
+      }),
+    );
     renderWithQuery(<OrderListPage />);
     await screen.findByText(/^총 /);
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), '고객 3');
-      expect(navReplace).not.toHaveBeenCalled();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(navReplace).toHaveBeenCalledTimes(1);
-      expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
-      expect(getMockSearch()).not.toContain('page=');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    const input = screen.getByRole('searchbox', { name: '주문 검색' });
+    await user.type(input, '고객 3');
+    // 디바운스 시간이 지나도 입력만으로는 요청하지 않는다
+    await new Promise((r) => setTimeout(r, 400));
+    expect(navReplace).not.toHaveBeenCalled();
+    expect(seen.some((q) => q.includes('q='))).toBe(false);
+    await user.keyboard('{Enter}');
+    expect(navReplace).toHaveBeenCalledTimes(1);
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
+    expect(getMockSearch()).not.toContain('page=');
+    expect(input).toHaveValue('고객 3');
+    await waitFor(() =>
+      expect(seen.some((q) => new URLSearchParams(q).get('q') === '고객 3')).toBe(true),
+    );
   });
 
-  it('초기화 cancels a pending search debounce', async () => {
+  it('검색 button submits the trimmed query', async () => {
     renderWithQuery(<OrderListPage />);
     await screen.findByText(/^총 /);
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), 'a');
-      await user.click(screen.getByRole('button', { name: '초기화' }));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300);
-      });
-      expect(getMockSearch()).toBe('');
-      expect(screen.getByRole('searchbox', { name: '주문 검색' })).toHaveValue('');
-    } finally {
-      vi.useRealTimers();
-    }
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), '  고객 3  ');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    expect(new URLSearchParams(getMockSearch()).get('q')).toBe('고객 3');
   });
 
+  it('초기화 discards text that was typed but not submitted', async () => {
+    renderWithQuery(<OrderListPage />);
+    await screen.findByText(/^총 /);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: '주문 검색' }), 'a');
+    await user.click(screen.getByRole('button', { name: '초기화' }));
+    expect(getMockSearch()).toBe('');
+    expect(screen.getByRole('searchbox', { name: '주문 검색' })).toHaveValue('');
+  });
   it('?to=2026-11-20 includes 23:59 KST and excludes 00:00 KST of the next day', async () => {
     const mk = (n: number, createdAt: string): OrderListItem => ({
       ...orderFixtures[0],
