@@ -69,7 +69,11 @@ export function OrderTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={cn('-mx-2', right && 'flex-row-reverse')}
+                        className={cn(
+                          'text-muted-foreground -mx-2 h-7 px-2 text-[13px] font-medium',
+                          state !== 'none' && 'text-foreground font-semibold',
+                          right && 'flex-row-reverse',
+                        )}
                         onClick={() => onSortChange(nextSort(sort, field))}
                       >
                         {label}
