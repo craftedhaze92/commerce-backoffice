@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import type { ProductDetail } from '@bo/contracts';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -31,7 +33,7 @@ export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
         <Button>상품 등록</Button>
       </DialogTrigger>
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-2xl"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -40,14 +42,17 @@ export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
             새 상품 정보를 입력하세요. 이미지는 나중에 추가해도 됩니다.
           </DialogDescription>
         </DialogHeader>
-        <ProductForm
-          mode="create"
-          onCancel={() => setOpen(false)}
-          onSubmitted={(detail) => {
-            setOpen(false);
-            onCreated?.(detail);
-          }}
-        />
+        <DialogBody>
+          <ProductForm
+            mode="create"
+            onCancel={() => setOpen(false)}
+            onSubmitted={(detail) => {
+              setOpen(false);
+              toast('상품을 등록했습니다');
+              onCreated?.(detail);
+            }}
+          />
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

@@ -72,6 +72,20 @@ function DialogContent({
   );
 }
 
+/**
+ * 긴 내용을 담는 다이얼로그의 스크롤 영역. DialogContent를 `flex flex-col`과 고정·최대 높이로 두고
+ * 머리(제목·닫기)는 위에 고정한 채 이 영역만 스크롤한다. 스크롤바가 모달 가장자리에 붙도록 좌우 여백을 넓힌다.
+ */
+function DialogBody({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn('-mx-6 min-h-0 flex-1 overflow-y-auto px-6', className)}
+      {...props}
+    />
+  );
+}
+
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div data-slot="dialog-header" className={cn('flex flex-col gap-2', className)} {...props} />
@@ -130,6 +144,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

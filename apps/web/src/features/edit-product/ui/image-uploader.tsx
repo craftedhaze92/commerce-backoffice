@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import Image from 'next/image';
 import { PRODUCT_LIMITS, type ProductImage } from '@bo/contracts';
 import { Badge } from '@/shared/ui/badge';
+import { ChevronLeftIcon, ChevronRightIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { ApiError } from '@/shared/api';
 import { cn } from '@/shared/lib/utils';
@@ -35,6 +36,8 @@ interface ImageUploaderProps {
   disabled?: boolean;
   /** 업로드 중인 파일이 생기면 true, 모두 끝나면 false로 알린다. */
   onPendingChange?: (pending: boolean) => void;
+  /** 좁은 자리(상품 상세 모달)용: 놓는 칸을 낮추고 썸네일을 한 줄에 더 많이 둔다. */
+  compact?: boolean;
 }
 
 interface PendingUpload {
@@ -47,6 +50,7 @@ export function ImageUploader({
   onChange,
   disabled = false,
   onPendingChange,
+  compact = false,
 }: ImageUploaderProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -125,13 +129,23 @@ export function ImageUploader({
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'border-hairline flex flex-col items-center gap-2 rounded-[10px] border border-dashed p-6 text-sm',
+            'border-hairline flex items-center gap-2 rounded-[10px] border border-dashed text-sm',
+            // 좁은 자리에서는 안내와 버튼을 한 줄에 두어 높이를 줄인다
+            compact ? 'justify-between px-4 py-2.5 text-[13px]' : 'flex-col p-6',
             dragging && 'border-brand bg-muted',
           )}
         >
           <span className="text-muted-foreground">
-            이미지를 끌어다 놓거나 파일을 선택하세요 (JPG·PNG·WEBP, {MAX_MB}MB 이하, 최대{' '}
-            {PRODUCT_LIMITS.imageMaxCount}장)
+            {compact ? (
+              <>
+                끌어다 놓거나 선택 · JPG·PNG·WEBP, {MAX_MB}MB, 최대 {PRODUCT_LIMITS.imageMaxCount}장
+              </>
+            ) : (
+              <>
+                이미지를 끌어다 놓거나 파일을 선택하세요 (JPG·PNG·WEBP, {MAX_MB}MB 이하, 최대{' '}
+                {PRODUCT_LIMITS.imageMaxCount}장)
+              </>
+            )}
           </span>
           <input
             ref={inputRef}
@@ -178,7 +192,10 @@ export function ImageUploader({
       )}
 
       {value.length > 0 && (
-        <ul aria-label="등록된 이미지" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <ul
+          aria-label="등록된 이미지"
+          className={cn('grid', compact ? 'grid-cols-4 gap-2' : 'grid-cols-2 gap-3 sm:grid-cols-4')}
+        >
           {value.map((img, index) => {
             const n = index + 1;
             return (
@@ -202,42 +219,46 @@ export function ImageUploader({
                     <Button
                       type="button"
                       variant="outline"
-                      size="xs"
+                      size={compact ? 'icon-xs' : 'xs'}
                       aria-label={`${n}번 이미지 앞으로`}
+                      title={compact ? '앞으로' : undefined}
                       disabled={index === 0}
                       onClick={() => commit(moveImage(latest.current, index, index - 1))}
                     >
-                      앞으로
+                      {compact ? <ChevronLeftIcon aria-hidden /> : '앞으로'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      size="xs"
+                      size={compact ? 'icon-xs' : 'xs'}
                       aria-label={`${n}번 이미지 뒤로`}
+                      title={compact ? '뒤로' : undefined}
                       disabled={index === value.length - 1}
                       onClick={() => commit(moveImage(latest.current, index, index + 1))}
                     >
-                      뒤로
+                      {compact ? <ChevronRightIcon aria-hidden /> : '뒤로'}
                     </Button>
                     {!img.isPrimary && (
                       <Button
                         type="button"
                         variant="outline"
-                        size="xs"
+                        size={compact ? 'icon-xs' : 'xs'}
                         aria-label={`${n}번 이미지 대표로 지정`}
+                        title={compact ? '대표로 지정' : undefined}
                         onClick={() => commit(setPrimaryImage(latest.current, img.id))}
                       >
-                        대표로 지정
+                        {compact ? <StarIcon aria-hidden /> : '대표로 지정'}
                       </Button>
                     )}
                     <Button
                       type="button"
                       variant="destructive"
-                      size="xs"
+                      size={compact ? 'icon-xs' : 'xs'}
                       aria-label={`${n}번 이미지 삭제`}
+                      title={compact ? '삭제' : undefined}
                       onClick={() => commit(removeImage(latest.current, img.id))}
                     >
-                      삭제
+                      {compact ? <Trash2Icon aria-hidden /> : '삭제'}
                     </Button>
                   </div>
                 )}

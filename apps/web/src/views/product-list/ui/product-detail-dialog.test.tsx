@@ -146,8 +146,9 @@ describe('ProductDetailDialog', () => {
       .map((img) => img.getAttribute('src')?.replace('/media/uploads/thumb-', 'img-'));
 
     await user.click(screen.getByRole('button', { name: '저장' }));
-    // 등록에 성공하면 모달이 닫힌다
+    // 등록에 성공하면 모달이 닫히고 완료 알림이 뜬다
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(await screen.findByText('상품을 등록했습니다')).toBeInTheDocument();
     expect(post.calls).toBe(1);
     expect(post.body).toEqual({
       sku: 'NEW-001',
@@ -250,6 +251,7 @@ describe('ProductDetailDialog', () => {
     await user.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(patch.calls).toBe(1));
     expect(patch.body).toEqual({ name: '바뀐 이름', price: 99000 });
+    expect(await screen.findByText('변경 사항을 저장했습니다')).toBeInTheDocument();
     // 저장 후 폼이 응답 기준으로 초기화되어 다시 바뀐 것이 없다
     await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeDisabled());
     expect(screen.getByLabelText('상품명')).toHaveValue('바뀐 이름');
@@ -302,6 +304,7 @@ describe('ProductDetailDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(del.calls).toBe(1);
+    expect(await screen.findByText('상품을 삭제했습니다')).toBeInTheDocument();
   });
 
   it('404 shows not-found state with a 닫기 button', async () => {
@@ -432,6 +435,7 @@ describe('ProductDetailDialog', () => {
       await user.click(screen.getByRole('button', { name: '조정' }));
       await waitFor(() => expect(patched.calls).toBe(1));
       expect(patched.body).toEqual({ delta: 5, note: '실사' });
+      expect(await screen.findByText('재고를 조정했습니다')).toBeInTheDocument();
       expect(
         await screen.findByText(
           `현재 재고 ${stock + 5}개 · 안전 재고 ${productDetailFixture.safetyStock}개`,
@@ -450,12 +454,29 @@ describe('ProductDetailDialog', () => {
       const card = await screen.findByRole('region', { name: '재고' });
       await within(card).findAllByRole('link', { name: /^ORD-/ });
       await user.click(within(card).getByRole('button', { name: '다음' }));
-      expect(await within(card).findByText('2 / 2')).toBeInTheDocument();
+      expect(await within(card).findByText(/^2 \/ \d+$/)).toBeInTheDocument();
       await user.click(within(card).getByRole('button', { name: '재고 조정' }));
       await user.type(screen.getByLabelText('수량'), '1');
       await user.type(screen.getByLabelText('사유'), '실사');
       await user.click(screen.getByRole('button', { name: '조정' }));
-      expect(await within(card).findByText('1 / 2')).toBeInTheDocument();
+      expect(await within(card).findByText(/^1 \/ \d+$/)).toBeInTheDocument();
+    });
+
+    it('shows the history 5 rows per page and pages through it', async () => {
+      const seen: string[] = [];
+      server.events.on('request:start', ({ request }) => {
+        if (request.url.includes('/inventory-history')) seen.push(new URL(request.url).search);
+      });
+      const user = userEvent.setup();
+      renderWithQuery(<ProductDetailDialog id={productDetailFixture.id} onClose={onClose} />);
+      const card = await screen.findByRole('region', { name: '재고' });
+      await within(card).findAllByRole('link', { name: /^ORD-/ });
+      // 머리 행을 뺀 본문 행이 5개다
+      expect(within(card).getAllByRole('row')).toHaveLength(6);
+      expect(seen.at(-1)).toContain('size=5');
+      await user.click(within(card).getByRole('button', { name: '다음' }));
+      await waitFor(() => expect(seen.at(-1)).toContain('page=2'));
+      server.events.removeAllListeners();
     });
   });
 });

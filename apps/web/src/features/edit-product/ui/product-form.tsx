@@ -8,6 +8,7 @@ import { useCategories } from '@/entities/category';
 import { PRODUCT_STATUS_LABEL } from '@/entities/product';
 import { ApiError } from '@/shared/api';
 import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/ui/toast';
 import { FORM_FIELD, FORM_LABEL } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -40,6 +41,14 @@ interface ProductFormProps {
   onSubmitted?: (detail: ProductDetail) => void;
   /** 있으면 저장 옆에 취소 버튼을 둔다(모달에서 닫기용). */
   onCancel?: () => void;
+  /** 취소 버튼 문구. 등록 모달은 "취소", 상세 모달은 "닫기". */
+  cancelLabel?: string;
+  /**
+   * stack(기본): 입력칸 → 이미지 → 저장을 세로로 쌓는다.
+   * split: 폼을 `display: contents`로 두고 입력칸과 이미지(+저장)를 두 블록으로 나눠,
+   * 부모 그리드가 `data-slot`으로 자리를 정하게 한다(상품 상세 모달의 2열 배치).
+   */
+  layout?: 'stack' | 'split';
 }
 
 function isFieldName(value: unknown): value is FieldName {
@@ -63,7 +72,10 @@ export function ProductForm({
   readOnly = false,
   onSubmitted,
   onCancel,
+  cancelLabel = '취소',
+  layout = 'stack',
 }: ProductFormProps) {
+  const split = layout === 'split';
   const idPrefix = useId();
   const categories = useCategories();
   const save = useSaveProduct();
@@ -113,6 +125,7 @@ export function ProductForm({
         if (variables.mode === 'edit') {
           setBaseline(detail);
           reset(toFormInput(detail));
+          toast('변경 사항을 저장했습니다');
         }
         onSubmitted?.(detail);
       },
@@ -131,126 +144,143 @@ export function ProductForm({
     });
   }
 
-  return (
-    <form noValidate className="flex max-w-3xl flex-col gap-5" onSubmit={handleSubmit(onValid)}>
-      {formError && (
-        <p role="alert" className="text-destructive text-sm">
-          {formError}
-        </p>
-      )}
+  const actions = (
+    <FormActions
+      readOnly={readOnly}
+      uploading={uploading}
+      onCancel={onCancel}
+      cancelLabel={cancelLabel}
+      disabled={save.isPending || uploading || !hasChanges}
+      pending={save.isPending}
+    />
+  );
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={id('sku')} label="SKU" errors={errors} name="sku">
-          <Input
-            {...a11y('sku')}
-            className={cn(FORM_FIELD, isEdit && 'bg-muted')}
-            readOnly={isEdit}
-            disabled={readOnly}
-            autoComplete="off"
-            placeholder="예: TSHIRT-001"
-            {...register('sku')}
-          />
-        </Field>
-        <Field id={id('name')} label="상품명" errors={errors} name="name">
-          <Input
-            {...a11y('name')}
-            className={FORM_FIELD}
-            disabled={readOnly}
-            {...register('name')}
-          />
-        </Field>
-        <Field id={id('categoryId')} label="카테고리" errors={errors} name="categoryId">
-          <Controller
-            control={control}
-            name="categoryId"
-            render={({ field }) => (
-              <Select
-                value={field.value || undefined}
-                onValueChange={field.onChange}
-                disabled={readOnly}
-              >
-                <SelectTrigger {...a11y('categoryId')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue placeholder="카테고리 선택">
-                    {field.value
-                      ? (categories.data?.find((c) => c.id === field.value)?.name ?? (
-                          <Skeleton aria-hidden className="h-4 w-16" />
-                        ))
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.data?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
-        <Field id={id('status')} label="상태" errors={errors} name="status">
-          <Controller
-            control={control}
-            name="status"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
-                <SelectTrigger {...a11y('status')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue>{PRODUCT_STATUS_LABEL[field.value]}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ProductStatus).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {PRODUCT_STATUS_LABEL[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
-        <Field id={id('price')} label="가격" errors={errors} name="price">
-          <Input
-            {...a11y('price')}
-            inputMode="numeric"
-            className={FORM_FIELD}
-            disabled={readOnly}
-            {...register('price')}
-          />
-        </Field>
-        {mode === 'create' && (
-          <Field id={id('initialStock')} label="초기 재고" errors={errors} name="initialStock">
+  return (
+    <form
+      noValidate
+      className={split ? 'contents' : 'flex max-w-3xl flex-col gap-5'}
+      onSubmit={handleSubmit(onValid)}
+    >
+      <div data-slot="product-form-main" className="flex flex-col gap-5">
+        {formError && (
+          <p role="alert" className="text-destructive text-sm">
+            {formError}
+          </p>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id={id('sku')} label="SKU" errors={errors} name="sku">
             <Input
-              {...a11y('initialStock')}
+              {...a11y('sku')}
+              className={cn(FORM_FIELD, isEdit && 'bg-muted')}
+              readOnly={isEdit}
+              disabled={readOnly}
+              autoComplete="off"
+              placeholder="예: TSHIRT-001"
+              {...register('sku')}
+            />
+          </Field>
+          <Field id={id('name')} label="상품명" errors={errors} name="name">
+            <Input
+              {...a11y('name')}
+              className={FORM_FIELD}
+              disabled={readOnly}
+              {...register('name')}
+            />
+          </Field>
+          <Field id={id('categoryId')} label="카테고리" errors={errors} name="categoryId">
+            <Controller
+              control={control}
+              name="categoryId"
+              render={({ field }) => (
+                <Select
+                  value={field.value || undefined}
+                  onValueChange={field.onChange}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger {...a11y('categoryId')} className={cn(FORM_FIELD, 'w-full')}>
+                    <SelectValue placeholder="카테고리 선택">
+                      {field.value
+                        ? (categories.data?.find((c) => c.id === field.value)?.name ?? (
+                            <Skeleton aria-hidden className="h-4 w-16" />
+                          ))
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.data?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field id={id('status')} label="상태" errors={errors} name="status">
+            <Controller
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
+                  <SelectTrigger {...a11y('status')} className={cn(FORM_FIELD, 'w-full')}>
+                    <SelectValue>{PRODUCT_STATUS_LABEL[field.value]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(ProductStatus).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {PRODUCT_STATUS_LABEL[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field id={id('price')} label="가격" errors={errors} name="price">
+            <Input
+              {...a11y('price')}
               inputMode="numeric"
               className={FORM_FIELD}
               disabled={readOnly}
-              {...register('initialStock')}
+              {...register('price')}
             />
           </Field>
-        )}
-        <Field id={id('safetyStock')} label="안전 재고" errors={errors} name="safetyStock">
-          <Input
-            {...a11y('safetyStock')}
-            inputMode="numeric"
+          {mode === 'create' && (
+            <Field id={id('initialStock')} label="초기 재고" errors={errors} name="initialStock">
+              <Input
+                {...a11y('initialStock')}
+                inputMode="numeric"
+                className={FORM_FIELD}
+                disabled={readOnly}
+                {...register('initialStock')}
+              />
+            </Field>
+          )}
+          <Field id={id('safetyStock')} label="안전 재고" errors={errors} name="safetyStock">
+            <Input
+              {...a11y('safetyStock')}
+              inputMode="numeric"
+              className={FORM_FIELD}
+              disabled={readOnly}
+              {...register('safetyStock')}
+            />
+          </Field>
+        </div>
+
+        <Field id={id('description')} label="설명" errors={errors} name="description">
+          <Textarea
+            {...a11y('description')}
+            rows={split ? 3 : 5}
             className={FORM_FIELD}
             disabled={readOnly}
-            {...register('safetyStock')}
+            {...register('description')}
           />
         </Field>
       </div>
 
-      <Field id={id('description')} label="설명" errors={errors} name="description">
-        <Textarea
-          {...a11y('description')}
-          rows={5}
-          className={FORM_FIELD}
-          disabled={readOnly}
-          {...register('description')}
-        />
-      </Field>
-
-      <div className={FORM_LABEL}>
+      <div data-slot="product-form-images" className={FORM_LABEL}>
         <span>이미지</span>
         <Controller
           control={control}
@@ -261,6 +291,7 @@ export function ProductForm({
               onChange={field.onChange}
               disabled={readOnly}
               onPendingChange={setUploading}
+              compact={split}
             />
           )}
         />
@@ -269,10 +300,33 @@ export function ProductForm({
             {errors.images.message}
           </span>
         )}
+        {split && actions}
       </div>
 
+      {!split && actions}
+    </form>
+  );
+}
+
+function FormActions({
+  readOnly,
+  uploading,
+  onCancel,
+  cancelLabel,
+  disabled,
+  pending,
+}: {
+  readOnly: boolean;
+  uploading: boolean;
+  onCancel?: () => void;
+  cancelLabel: string;
+  disabled: boolean;
+  pending: boolean;
+}) {
+  return (
+    <>
       {!readOnly && (
-        <div className="flex items-center justify-end gap-3">
+        <div className="mt-auto flex items-center justify-end gap-3">
           {uploading && (
             <span role="status" className="text-muted-foreground text-xs">
               {UPLOAD_PENDING_HINT}
@@ -280,15 +334,15 @@ export function ProductForm({
           )}
           {onCancel && (
             <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
-              취소
+              {cancelLabel}
             </Button>
           )}
-          <Button type="submit" size="lg" disabled={save.isPending || uploading || !hasChanges}>
-            {save.isPending ? '저장 중...' : '저장'}
+          <Button type="submit" size="lg" disabled={disabled}>
+            {pending ? '저장 중...' : '저장'}
           </Button>
         </div>
       )}
-    </form>
+    </>
   );
 }
 

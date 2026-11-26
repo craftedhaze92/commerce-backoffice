@@ -29,15 +29,25 @@ function Remark({ item }: { item: InventoryHistoryItem }) {
   return <>-</>;
 }
 
-export function InventoryHistory({ productId }: { productId: string }) {
+interface InventoryHistoryProps {
+  productId: string;
+  /** 한 페이지에 보일 이력 수. 상품 상세 모달은 5개씩 넘겨 본다. */
+  pageSize?: number;
+  /** true면 행을 낮추고 칸 여백을 줄인다(좁은 모달용). 페이지 크기만큼 높이를 잡아 둬 넘길 때 흔들리지 않는다. */
+  compact?: boolean;
+}
+
+export function InventoryHistory({ productId, pageSize, compact = false }: InventoryHistoryProps) {
   const [page, setPage] = useState(1);
-  const history = useInventoryHistory(productId, page);
+  const history = useInventoryHistory(productId, page, pageSize);
   const items = history.data?.items ?? [];
   const totalPages = history.data?.meta.totalPages ?? 1;
 
   return (
-    <div className="flex flex-col gap-2">
-      <Table>
+    <div className={cn('flex flex-col gap-2', compact && 'min-h-[18.75rem] flex-1')}>
+      <Table
+        className={cn(compact && '[&_td]:h-11 [&_td]:px-2 [&_td]:py-1 [&_th]:h-10 [&_th]:px-2')}
+      >
         <TableHeader>
           <TableRow>
             {COLUMNS.map((c, i) => (
@@ -50,6 +60,7 @@ export function InventoryHistory({ productId }: { productId: string }) {
         <TableBody>
           {history.isPending ? (
             <TableSkeletonRows
+              rows={Math.min(pageSize ?? 5, 5)}
               testId="inventory-skeleton-row"
               cells={['text', 'badge', 'number', 'number', 'text', 'text']}
             />
@@ -96,7 +107,12 @@ export function InventoryHistory({ productId }: { productId: string }) {
           )}
         </TableBody>
       </Table>
-      <DataPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <DataPagination
+        className={cn(compact && 'mt-auto')}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

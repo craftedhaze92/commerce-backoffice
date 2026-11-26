@@ -13,6 +13,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -38,8 +39,13 @@ export function ProductDetailDialog({ id, onClose }: ProductDetailDialogProps) {
         if (!open) onClose();
       }}
     >
+      {/*
+        높이를 고정한다. 내용 높이(스켈레톤 → 폼 → 재고 이력)를 따라 모달이 커지면 화면 가운데 정렬 때문에
+        위아래로 출렁인다. 넓은 화면에서는 2열(왼쪽 기본 정보·이미지 / 오른쪽 재고)로 펼쳐 스크롤 없이 한 화면에 담고,
+        재고 이력은 5개씩 넘겨 본다. 좁은 화면에서는 1열로 쌓이므로 본문(DialogBody)만 스크롤한다.
+      */}
       <DialogContent
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl"
+        className="flex h-[min(51rem,calc(100dvh-2rem))] flex-col sm:max-w-6xl"
         onInteractOutside={(e) => e.preventDefault()}
       >
         {id !== undefined && <ProductDetail id={id} onClose={onClose} />}
@@ -48,23 +54,54 @@ export function ProductDetailDialog({ id, onClose }: ProductDetailDialogProps) {
   );
 }
 
-/** 상품 폼과 같은 2열 라벨·입력 배치의 로딩 자리. 불러온 뒤 화면이 흔들리지 않게 크기를 맞춘다. */
-function FormSkeleton() {
+/**
+ * 상세 본문 그리드. 상품 폼(split)이 내놓는 두 블록과 재고 영역을 자리에 놓는다.
+ * 넓은 화면: 왼쪽 위가 기본 정보, 왼쪽 아래가 이미지(+저장), 오른쪽 열 전체가 재고.
+ */
+const DETAIL_GRID = [
+  'grid content-start gap-x-8 gap-y-6',
+  "[grid-template-areas:'main'_'images'_'stock']",
+  // 왼쪽은 기본 정보(min-content) 아래 이미지·저장이 남은 높이를 채우고, 오른쪽은 재고가 두 행을 모두 쓴다.
+  // auto 행으로 두면 두 행에 걸친 블록의 높이가 다른 행으로 나눠 들어가 칸이 벌어지고 본문이 넘친다.
+  "lg:h-full lg:grid-cols-2 lg:grid-rows-[min-content_minmax(0,1fr)] lg:[grid-template-areas:'main_stock'_'images_stock']",
+  // 폼은 display: contents라 DOM상 손자이므로 직접 자식(>)이 아니라 하위 선택자로 자리를 준다
+  '[&_[data-slot=product-form-main]]:[grid-area:main]',
+  '[&_[data-slot=product-form-images]]:[grid-area:images]',
+  '[&_[data-slot=product-stock]]:[grid-area:stock]',
+].join(' ');
+
+/** 상세 본문과 같은 2열(왼쪽 기본 정보·이미지·저장 / 오른쪽 재고) 로딩 자리. 불러온 뒤 배치가 바뀌지 않게 맞춘다. */
+function DetailSkeleton() {
   return (
-    <div className="flex flex-col gap-5" aria-busy="true">
-      <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+    <div className="grid h-full gap-x-8 gap-y-6 lg:grid-cols-2" aria-busy="true">
+      <div className="flex flex-col gap-5">
+        <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <Skeleton className="h-3.5 w-14" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3.5 w-14" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3.5 w-14" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+        <Skeleton className="mt-auto ml-auto h-12 w-20 rounded-xl" />
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-10 w-24 rounded-lg" />
+        </div>
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex flex-col gap-2">
-            <Skeleton className="h-3.5 w-14" />
-            <Skeleton className="h-10 w-full rounded-lg" />
-          </div>
+          <Skeleton key={i} className="h-8 w-full" />
         ))}
       </div>
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-3.5 w-14" />
-        <Skeleton className="h-24 w-full rounded-lg" />
-      </div>
-      <Skeleton className="ml-auto h-12 w-20 rounded-xl" />
     </div>
   );
 }
@@ -81,11 +118,14 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
   if (product.isPending || me.isPending) {
     return (
       <>
-        <DialogHeader>
+        <DialogHeader className="pr-8">
           <DialogTitle className="sr-only">상품 불러오는 중</DialogTitle>
           <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-20" />
         </DialogHeader>
-        <FormSkeleton />
+        <DialogBody>
+          <DetailSkeleton />
+        </DialogBody>
       </>
     );
   }
@@ -97,7 +137,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
         <DialogHeader>
           <DialogTitle>상품 상세</DialogTitle>
         </DialogHeader>
-        <div role="alert" className="flex flex-col items-start gap-3 py-4">
+        <DialogBody role="alert" className="flex flex-col items-start gap-3 py-4">
           <p className="text-[15px]">
             {notFound ? '상품을 찾을 수 없습니다' : '상품을 불러오지 못했습니다'}
           </p>
@@ -110,7 +150,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
               다시 시도
             </Button>
           )}
-        </div>
+        </DialogBody>
       </>
     );
   }
@@ -125,31 +165,42 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
         </div>
         {canWrite && <DeleteProductButton id={detail.id} name={detail.name} onDeleted={onClose} />}
       </DialogHeader>
-      <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
-      <section
-        aria-labelledby="inventory-heading"
-        className="border-canvas flex flex-col gap-4 border-t-2 pt-5"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h3 id="inventory-heading" className="text-section">
-              재고
-            </h3>
-            <span className="text-muted-strong text-[15px] font-medium">
-              현재 재고 {detail.stock}개 · 안전 재고 {detail.safetyStock}개
-            </span>
-            {detail.isLowStock && <Badge variant="destructive">부족</Badge>}
+      <DialogBody className={DETAIL_GRID}>
+        <ProductForm
+          key={detail.id}
+          mode="edit"
+          layout="split"
+          initial={detail}
+          readOnly={!canWrite}
+          onCancel={onClose}
+          cancelLabel="닫기"
+        />
+        <section
+          aria-labelledby="inventory-heading"
+          data-slot="product-stock"
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h3 id="inventory-heading" className="text-section">
+                재고
+              </h3>
+              <span className="text-muted-strong text-[15px] font-medium">
+                현재 재고 {detail.stock}개 · 안전 재고 {detail.safetyStock}개
+              </span>
+              {detail.isLowStock && <Badge variant="destructive">부족</Badge>}
+            </div>
+            {canAdjust && (
+              <AdjustInventoryDialog
+                productId={detail.id}
+                currentStock={detail.stock}
+                onAdjusted={() => setHistoryKey((k) => k + 1)}
+              />
+            )}
           </div>
-          {canAdjust && (
-            <AdjustInventoryDialog
-              productId={detail.id}
-              currentStock={detail.stock}
-              onAdjusted={() => setHistoryKey((k) => k + 1)}
-            />
-          )}
-        </div>
-        <InventoryHistory key={historyKey} productId={detail.id} />
-      </section>
+          <InventoryHistory key={historyKey} productId={detail.id} pageSize={5} compact />
+        </section>
+      </DialogBody>
     </>
   );
 }
