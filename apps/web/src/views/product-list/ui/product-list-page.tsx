@@ -9,7 +9,7 @@ import {
   ProductFilterBar,
   useProductListParams,
 } from '@/features/product-filter';
-import { ProductTable } from '@/widgets/product-table';
+import { ProductColumnMenu, ProductTable } from '@/widgets/product-table';
 import { buttonVariants } from '@/shared/ui/button';
 import { DataPagination } from '@/shared/ui/data-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -41,7 +41,10 @@ export function ProductListPage() {
         </div>
       </header>
       <div className="sheet flex flex-col gap-5 p-4 md:p-6">
-        <ProductFilterBar params={params} onChange={setParams} />
+        <div className="flex items-start justify-between gap-3">
+          <ProductFilterBar params={params} onChange={setParams} />
+          <ProductColumnMenu />
+        </div>
         <ProductTable
           data={products.data?.items}
           isPending={products.isPending}

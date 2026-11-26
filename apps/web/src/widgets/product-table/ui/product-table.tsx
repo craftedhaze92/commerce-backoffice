@@ -4,23 +4,12 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { ProductListItem } from '@bo/contracts';
 import { Button } from '@/shared/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { cn } from '@/shared/lib/utils';
-import {
-  useColumnVisibility,
-  useHydrateColumnVisibility,
-  type ToggleableColumn,
-} from '../model/column-visibility-store';
+import { useColumnVisibility, useHydrateColumnVisibility } from '../model/column-visibility-store';
 import {
   ariaSortOf,
-  COLUMN_LABEL,
   nextSort,
   productColumns,
   RIGHT_ALIGNED_COLUMNS,
@@ -38,7 +27,6 @@ interface ProductTableProps {
 }
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4];
-const TOGGLEABLE = Object.keys(COLUMN_LABEL) as ToggleableColumn[];
 
 export function ProductTable({
   data,
@@ -53,7 +41,6 @@ export function ProductTable({
 
   useHydrateColumnVisibility();
   const visible = useColumnVisibility((s) => s.visible);
-  const setVisible = useColumnVisibility((s) => s.setVisible);
 
   const table = useReactTable({
     data: data ?? EMPTY,
@@ -68,26 +55,6 @@ export function ProductTable({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              컬럼
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {TOGGLEABLE.map((id) => (
-              <DropdownMenuCheckboxItem
-                key={id}
-                checked={visible[id]}
-                onCheckedChange={(checked) => setVisible(id, checked === true)}
-              >
-                {COLUMN_LABEL[id]}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((group) => (
