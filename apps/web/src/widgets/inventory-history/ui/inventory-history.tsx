@@ -46,7 +46,11 @@ export function InventoryHistory({ productId, pageSize, compact = false }: Inven
   return (
     <div className={cn('flex flex-col gap-2', compact && 'min-h-[18.75rem] flex-1')}>
       <Table
-        className={cn(compact && '[&_td]:h-11 [&_td]:px-2 [&_td]:py-1 [&_th]:h-10 [&_th]:px-2')}
+        // 좁은 열에서도 가로로 넘치지 않게 칸 여백을 줄이고 줄바꿈을 허용한다(비고의 주문번호 등)
+        className={cn(
+          compact &&
+            '[&_td]:h-11 [&_td]:px-2 [&_td]:py-1 [&_td]:break-all [&_td]:whitespace-normal [&_th]:h-10 [&_th]:px-2',
+        )}
       >
         <TableHeader>
           <TableRow>
@@ -87,7 +91,9 @@ export function InventoryHistory({ productId, pageSize, compact = false }: Inven
           ) : (
             items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell>{kst(item.createdAt).format('YYYY.MM.DD HH:mm')}</TableCell>
+                <TableCell className={cn(compact && 'break-normal whitespace-nowrap')}>
+                  {kst(item.createdAt).format(compact ? 'MM.DD HH:mm' : 'YYYY.MM.DD HH:mm')}
+                </TableCell>
                 <TableCell>{INVENTORY_REASON_LABEL[item.reason]}</TableCell>
                 <TableCell
                   className={cn(
