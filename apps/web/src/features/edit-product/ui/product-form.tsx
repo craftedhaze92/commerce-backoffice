@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import { useId, useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +45,11 @@ interface ProductFormProps {
   /** 취소 버튼 문구. 등록 모달은 "취소", 상세 모달은 "닫기". */
   cancelLabel?: string;
   /**
+   * 있으면 취소·저장 버튼을 이 요소(모달의 고정 하단)에 그린다. 본문이 스크롤돼도 버튼은 제자리에 남는다.
+   * 버튼은 DOM상 폼 밖이므로 저장 버튼은 `form` 속성으로 이 폼을 제출한다.
+   */
+  actionsContainer?: Element | null;
+  /**
    * stack(기본): 입력칸 → 이미지 → 저장을 세로로 쌓는다.
    * split: 폼을 `display: contents`로 두고 입력칸과 이미지(+저장)를 두 블록으로 나눠,
    * 부모 그리드가 `data-slot`으로 자리를 정하게 한다(상품 상세 모달의 2열 배치).
@@ -73,6 +79,7 @@ export function ProductForm({
   onSubmitted,
   onCancel,
   cancelLabel = '취소',
+  actionsContainer,
   layout = 'stack',
 }: ProductFormProps) {
   const split = layout === 'split';
@@ -144,8 +151,10 @@ export function ProductForm({
     });
   }
 
-  const actions = (
+  const formId = `${idPrefix}-form`;
+  const actionsNode = (
     <FormActions
+      formId={formId}
       readOnly={readOnly}
       uploading={uploading}
       onCancel={onCancel}
@@ -154,9 +163,16 @@ export function ProductForm({
       pending={save.isPending}
     />
   );
+  // 하단 자리가 주어지면 그곳에, 아니면 폼 끝에 둔다. 자리가 아직 마운트되지 않았으면 그리지 않는다
+  const portalActions =
+    actionsContainer !== undefined
+      ? actionsContainer && createPortal(actionsNode, actionsContainer)
+      : null;
+  const inlineActions = actionsContainer === undefined ? actionsNode : null;
 
   return (
     <form
+      id={formId}
       noValidate
       className={split ? 'contents' : 'flex max-w-3xl flex-col gap-5'}
       onSubmit={handleSubmit(onValid)}
@@ -300,15 +316,16 @@ export function ProductForm({
             {errors.images.message}
           </span>
         )}
-        {split && actions}
       </div>
 
-      {!split && actions}
+      {inlineActions}
+      {portalActions}
     </form>
   );
 }
 
 function FormActions({
+  formId,
   readOnly,
   uploading,
   onCancel,
@@ -316,6 +333,7 @@ function FormActions({
   disabled,
   pending,
 }: {
+  formId: string;
   readOnly: boolean;
   uploading: boolean;
   onCancel?: () => void;
@@ -323,26 +341,26 @@ function FormActions({
   disabled: boolean;
   pending: boolean;
 }) {
+  // 읽기 전용이어도 닫기(취소)는 남긴다. 모달에는 X가 없어 이 버튼이 닫는 길이다
+  if (readOnly && !onCancel) return null;
   return (
-    <>
-      {!readOnly && (
-        <div className="mt-auto flex items-center justify-end gap-3">
-          {uploading && (
-            <span role="status" className="text-muted-foreground text-xs">
-              {UPLOAD_PENDING_HINT}
-            </span>
-          )}
-          {onCancel && (
-            <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
-              {cancelLabel}
-            </Button>
-          )}
-          <Button type="submit" size="lg" disabled={disabled}>
-            {pending ? '저장 중...' : '저장'}
-          </Button>
-        </div>
+    <div className="flex items-center justify-end gap-3">
+      {uploading && (
+        <span role="status" className="text-muted-foreground text-xs">
+          {UPLOAD_PENDING_HINT}
+        </span>
       )}
-    </>
+      {onCancel && (
+        <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+      )}
+      {!readOnly && (
+        <Button type="submit" form={formId} size="lg" disabled={disabled}>
+          {pending ? '저장 중...' : '저장'}
+        </Button>
+      )}
+    </div>
   );
 }
 

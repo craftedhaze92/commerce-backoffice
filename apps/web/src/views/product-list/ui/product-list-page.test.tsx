@@ -134,10 +134,10 @@ describe('ProductListPage', () => {
     renderWithQuery(<ProductListPage />);
     const dialog = await screen.findByRole('dialog', { name: productDetailFixture.name });
     expect(within(dialog).getByLabelText('상품명')).toHaveValue(productDetailFixture.name);
-    // 닫기는 저장 옆 버튼과 오른쪽 위 X 두 곳에 있다. 저장 옆(문서 순서상 먼저) 버튼으로 닫는다
-    const [footerClose, cornerClose] = within(dialog).getAllByRole('button', { name: '닫기' });
-    expect(cornerClose).toBeDefined();
-    await userEvent.setup().click(footerClose!);
+    // X는 없고, 하단의 닫기 하나로 닫는다
+    const closes = within(dialog).getAllByRole('button', { name: '닫기' });
+    expect(closes).toHaveLength(1);
+    await userEvent.setup().click(closes[0]!);
     expect(Object.fromEntries(new URLSearchParams(getMockSearch()))).toEqual({
       q: '테스트',
       page: '2',

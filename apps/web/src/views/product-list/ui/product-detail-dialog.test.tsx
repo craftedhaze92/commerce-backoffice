@@ -267,24 +267,22 @@ describe('ProductDetailDialog', () => {
     expect(screen.getByRole('combobox', { name: '카테고리' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '상품 삭제' })).not.toBeInTheDocument();
+    // 읽기 전용이어도 하단의 닫기는 있다
+    expect(screen.getByRole('button', { name: '닫기' })).toBeInTheDocument();
     expect(screen.queryByLabelText('파일 선택')).not.toBeInTheDocument();
     expect(screen.getAllByRole('img')).toHaveLength(2);
   });
 
-  it('create dialog closes with 취소 or the close button and discards what was typed', async () => {
+  it('create dialog has no X; it closes with 취소 or Esc and discards what was typed', async () => {
     const user = userEvent.setup();
     await openCreate(user);
+    expect(screen.queryByRole('button', { name: '닫기' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('상품명'), '버릴 상품');
     await user.click(screen.getByRole('button', { name: '취소' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '상품 등록' }));
     expect(await screen.findByLabelText('상품명')).toHaveValue('');
-    await user.click(screen.getByRole('button', { name: '닫기' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '상품 등록' }));
-    await screen.findByLabelText('상품명');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -312,9 +310,8 @@ describe('ProductDetailDialog', () => {
       <ProductDetailDialog id="00000000-0000-4000-8000-0000000000ff" onClose={onClose} />,
     );
     expect(await screen.findByText('상품을 찾을 수 없습니다')).toBeInTheDocument();
-    await userEvent
-      .setup()
-      .click(within(screen.getByRole('alert')).getByRole('button', { name: '닫기' }));
+    // 하단의 닫기로 닫는다(X는 없다)
+    await userEvent.setup().click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
   /** 업로드 응답을 release()를 부를 때까지 붙잡아 둔다. */

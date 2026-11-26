@@ -9,6 +9,7 @@ import {
   DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,11 +22,14 @@ interface CreateProductDialogProps {
 }
 
 /**
- * 상품 등록 모달. 닫기(X)·Esc·취소로 닫을 수 있고, 닫으면 입력 중인 내용은 버린다.
+ * 상품 등록 모달. 하단의 취소·Esc로 닫을 수 있고, 닫으면 입력 중인 내용은 버린다.
+ * 취소·저장은 본문이 스크롤돼도 움직이지 않는 하단에 둔다.
  * 바깥 클릭으로는 닫지 않는다 — 긴 폼을 실수로 잃지 않게 한다.
  */
 export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
   const [open, setOpen] = useState(false);
+  // 취소·저장은 스크롤되지 않는 하단에 둔다. 폼이 이 자리에 버튼을 그린다
+  const [footer, setFooter] = useState<HTMLDivElement | null>(null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -34,6 +38,7 @@ export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
       </DialogTrigger>
       <DialogContent
         className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-2xl"
+        showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -45,6 +50,7 @@ export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
         <DialogBody>
           <ProductForm
             mode="create"
+            actionsContainer={footer}
             onCancel={() => setOpen(false)}
             onSubmitted={(detail) => {
               setOpen(false);
@@ -53,6 +59,7 @@ export function CreateProductDialog({ onCreated }: CreateProductDialogProps) {
             }}
           />
         </DialogBody>
+        <DialogFooter ref={setFooter} sticky />
       </DialogContent>
     </Dialog>
   );

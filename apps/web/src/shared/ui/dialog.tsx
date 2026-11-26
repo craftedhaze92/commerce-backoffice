@@ -95,15 +95,22 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 function DialogFooter({
   className,
   showCloseButton = false,
+  sticky = false,
   children,
   ...props
 }: React.ComponentProps<'div'> & {
   showCloseButton?: boolean;
+  /** 스크롤 본문(DialogBody) 아래에 고정된 하단. 위쪽 경계선으로 본문과 나눈다. */
+  sticky?: boolean;
 }) {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn('flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end', className)}
+      className={cn(
+        'flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end',
+        sticky && 'border-canvas -mx-6 shrink-0 border-t-2 px-6 pt-4',
+        className,
+      )}
       {...props}
     >
       {children}

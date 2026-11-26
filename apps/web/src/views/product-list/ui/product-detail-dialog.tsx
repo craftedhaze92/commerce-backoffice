@@ -16,6 +16,7 @@ import {
   DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
@@ -28,7 +29,7 @@ interface ProductDetailDialogProps {
 }
 
 /**
- * 상품 상세·수정 모달. 목록 위에서 열리고 닫기(X)·Esc로 닫는다.
+ * 상품 상세·수정 모달. 목록 위에서 열리고 하단의 닫기·Esc로 닫는다. 닫기·저장은 스크롤되지 않는 하단에 둔다.
  * 수정 중인 내용을 실수로 잃지 않도록 바깥 클릭으로는 닫지 않는다.
  */
 export function ProductDetailDialog({ id, onClose }: ProductDetailDialogProps) {
@@ -46,6 +47,7 @@ export function ProductDetailDialog({ id, onClose }: ProductDetailDialogProps) {
       */}
       <DialogContent
         className="flex h-[min(51rem,calc(100dvh-2rem))] flex-col sm:max-w-6xl"
+        showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
       >
         {id !== undefined && <ProductDetail id={id} onClose={onClose} />}
@@ -113,12 +115,23 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const canAdjust = me.data !== undefined && can(me.data.role, 'inventory:adjust');
   // 조정에 성공하면 이력을 첫 페이지부터 다시 보여 주려고 위젯을 새로 마운트한다
   const [historyKey, setHistoryKey] = useState(0);
+  // 닫기·저장은 스크롤되지 않는 하단에 둔다. 폼이 이 자리에 버튼을 그린다
+  const [footer, setFooter] = useState<HTMLDivElement | null>(null);
+
+  // X가 없으므로 불러오는 중·오류일 때도 하단에 닫기를 둔다
+  const closeFooter = (
+    <DialogFooter sticky>
+      <Button variant="secondary" size="lg" onClick={onClose}>
+        닫기
+      </Button>
+    </DialogFooter>
+  );
 
   // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
   if (product.isPending || me.isPending) {
     return (
       <>
-        <DialogHeader className="pr-8">
+        <DialogHeader>
           <DialogTitle className="sr-only">상품 불러오는 중</DialogTitle>
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-4 w-20" />
@@ -126,6 +139,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
         <DialogBody>
           <DetailSkeleton />
         </DialogBody>
+        {closeFooter}
       </>
     );
   }
@@ -141,16 +155,13 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <p className="text-[15px]">
             {notFound ? '상품을 찾을 수 없습니다' : '상품을 불러오지 못했습니다'}
           </p>
-          {notFound ? (
-            <Button variant="secondary" onClick={onClose}>
-              닫기
-            </Button>
-          ) : (
+          {!notFound && (
             <Button variant="secondary" onClick={() => void product.refetch()}>
               다시 시도
             </Button>
           )}
         </DialogBody>
+        {closeFooter}
       </>
     );
   }
@@ -158,7 +169,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const detail = product.data;
   return (
     <>
-      <DialogHeader className="flex-row items-center justify-between gap-3 pr-8">
+      <DialogHeader className="flex-row items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <DialogTitle className="truncate">{detail.name}</DialogTitle>
           <DialogDescription>{detail.sku}</DialogDescription>
@@ -172,6 +183,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
           layout="split"
           initial={detail}
           readOnly={!canWrite}
+          actionsContainer={footer}
           onCancel={onClose}
           cancelLabel="닫기"
         />
@@ -201,6 +213,7 @@ function ProductDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <InventoryHistory key={historyKey} productId={detail.id} pageSize={5} compact />
         </section>
       </DialogBody>
+      <DialogFooter ref={setFooter} sticky />
     </>
   );
 }
