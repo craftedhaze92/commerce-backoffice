@@ -21,7 +21,7 @@ export function LowStockTable() {
   return (
     <Card className="px-(--card-spacing)">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[15px] font-bold">재고 부족</h2>
+        <h2 className="text-section">재고 부족</h2>
         <Link
           href="/products?lowStock=true"
           className="text-muted-foreground text-xs hover:underline"

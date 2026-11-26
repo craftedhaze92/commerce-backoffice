@@ -284,7 +284,7 @@ function Field({ id, label, name, errors, children }: FieldProps) {
   const message = errors[name]?.message;
   return (
     <div className={FORM_LABEL}>
-      <Label htmlFor={id} className="text-xs font-semibold">
+      <Label htmlFor={id} className="text-muted-strong text-[13px] font-semibold">
         {label}
       </Label>
       {children}

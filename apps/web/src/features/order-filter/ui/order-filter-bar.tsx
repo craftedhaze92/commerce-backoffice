@@ -59,7 +59,11 @@ function StatusTabs({
     ...Object.values(OrderStatus).map((s) => ({ value: s, label: ORDER_STATUS_LABEL[s] })),
   ];
   return (
-    <div role="tablist" aria-label="주문 상태" className="flex flex-wrap gap-1 border-b">
+    <div
+      role="tablist"
+      aria-label="주문 상태"
+      className="border-canvas flex flex-wrap gap-5 border-b-2"
+    >
       {tabs.map((t) => {
         const selected = t.value === status;
         return (
@@ -70,9 +74,9 @@ function StatusTabs({
             aria-selected={selected}
             onClick={() => onChange(t.value)}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              '-mb-0.5 border-b-2 py-3 text-[17px] font-semibold transition-colors',
               selected
-                ? 'border-primary text-foreground'
+                ? 'border-foreground text-foreground'
                 : 'text-muted-foreground hover:text-foreground border-transparent',
             )}
           >

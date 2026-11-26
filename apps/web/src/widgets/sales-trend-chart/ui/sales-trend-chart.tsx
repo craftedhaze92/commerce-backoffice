@@ -60,7 +60,7 @@ export function SalesTrendChart({ days }: { days: SalesTrendDays }) {
   return (
     <Card className={cn('px-(--card-spacing)', empty && EMPTY_CARD)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-[15px] font-bold">매출 추이</h2>
+        <h2 className="text-section">매출 추이</h2>
         {data ? (
           <div className="flex items-baseline gap-2 tabular-nums">
             <span className="text-base font-semibold">{formatWon(data.total)}</span>

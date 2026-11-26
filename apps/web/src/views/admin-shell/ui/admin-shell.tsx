@@ -8,7 +8,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset className="p-6">{children}</SidebarInset>
+      <SidebarInset className="p-4 md:p-8">{children}</SidebarInset>
     </SidebarProvider>
   );
 }

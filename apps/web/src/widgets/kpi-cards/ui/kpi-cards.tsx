@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/shared/lib/utils';
 import Link from 'next/link';
 import { changeRate, type DashboardSummary } from '@bo/contracts';
 import { useDashboardSummary } from '@/entities/dashboard';
@@ -32,9 +33,13 @@ interface KpiCardProps {
 }
 
 function KpiCard({ title, value, detail, href }: KpiCardProps) {
-  const label = <span className="text-muted-foreground text-[13px]">{title}</span>;
+  const label = <span className="text-muted-strong text-[15px] font-medium">{title}</span>;
   return (
-    <Card role="group" aria-label={title} className="relative gap-2">
+    <Card
+      role="group"
+      aria-label={title}
+      className={cn('relative gap-1.5', href && 'hover:bg-subtle transition-colors')}
+    >
       <div className="px-(--card-spacing)">
         {href ? (
           <Link href={href} className="after:absolute after:inset-0 after:content-['']">
@@ -44,8 +49,8 @@ function KpiCard({ title, value, detail, href }: KpiCardProps) {
           label
         )}
       </div>
-      <div className="px-(--card-spacing) text-2xl font-semibold tabular-nums">{value}</div>
-      {detail ? <div className="px-(--card-spacing) text-xs">{detail}</div> : null}
+      <div className="text-figure px-(--card-spacing)">{value}</div>
+      {detail ? <div className="px-(--card-spacing) text-[13px] font-medium">{detail}</div> : null}
     </Card>
   );
 }

@@ -58,62 +58,68 @@ export function OrderDetailPage({ id }: { id: string }) {
     <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold">{detail.orderNo}</h1>
+          <h1 className="text-title">{detail.orderNo}</h1>
           <OrderStatusBadge status={detail.status} />
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-[15px] font-medium">
           고객 {detail.customerName} · 주문일시 {kst(detail.createdAt).format('YYYY.MM.DD HH:mm')}
         </p>
       </header>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>상품명</TableHead>
-            <TableHead>SKU</TableHead>
-            <TableHead className="text-right">단가</TableHead>
-            <TableHead className="text-right">수량</TableHead>
-            <TableHead className="text-right">소계</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {detail.items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell>
-                {item.productDeleted ? (
-                  <span className="inline-flex items-center gap-2">
-                    {item.productName}
-                    <Badge variant="secondary" className="text-muted-foreground">
-                      삭제된 상품
-                    </Badge>
-                  </span>
-                ) : (
-                  <Link href={`/products/${item.productId}`} className="hover:underline">
-                    {item.productName}
-                  </Link>
-                )}
-              </TableCell>
-              <TableCell>{item.sku}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatWon(item.unitPrice)}</TableCell>
-              <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatWon(item.subtotal)}</TableCell>
+      <div className="sheet p-4 md:p-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>상품명</TableHead>
+              <TableHead>SKU</TableHead>
+              <TableHead className="text-right">단가</TableHead>
+              <TableHead className="text-right">수량</TableHead>
+              <TableHead className="text-right">소계</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={4}>합계</TableCell>
-            <TableCell className="text-right font-bold tabular-nums">
-              {formatWon(detail.totalAmount)}
-            </TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {detail.items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>
+                  {item.productDeleted ? (
+                    <span className="inline-flex items-center gap-2">
+                      {item.productName}
+                      <Badge variant="secondary" className="text-muted-foreground">
+                        삭제된 상품
+                      </Badge>
+                    </span>
+                  ) : (
+                    <Link href={`/products/${item.productId}`} className="hover:underline">
+                      {item.productName}
+                    </Link>
+                  )}
+                </TableCell>
+                <TableCell>{item.sku}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatWon(item.unitPrice)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatWon(item.subtotal)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={4}>합계</TableCell>
+              <TableCell className="text-right font-bold tabular-nums">
+                {formatWon(detail.totalAmount)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
 
       <OrderActions order={detail} />
 
-      <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-bold">상태 이력</h2>
+      <div className="sheet flex flex-col gap-4 p-4 md:p-6">
+        <h2 className="text-section">상태 이력</h2>
         <OrderTimeline history={detail.history} />
       </div>
     </section>

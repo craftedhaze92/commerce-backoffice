@@ -12,12 +12,12 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold">커머스 백오피스</CardTitle>
-          <CardDescription>관리자 로그인</CardDescription>
+      <Card className="w-full max-w-md gap-8 py-10">
+        <CardHeader className="px-8">
+          <CardTitle className="text-title">커머스 백오피스</CardTitle>
+          <CardDescription className="text-[15px]">관리자 로그인</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8">
           <LoginForm onSuccess={() => router.replace(sanitizeNext(next))} />
         </CardContent>
       </Card>

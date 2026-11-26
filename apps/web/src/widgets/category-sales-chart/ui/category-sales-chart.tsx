@@ -58,7 +58,7 @@ export function CategorySalesChart({ days }: { days: SalesTrendDays }) {
 
   return (
     <Card className={cn('@container px-(--card-spacing)', empty && EMPTY_CARD)}>
-      <h2 className="text-[15px] font-bold">카테고리별 매출</h2>
+      <h2 className="text-section">카테고리별 매출</h2>
 
       {isError && !data ? (
         <div role="alert" className="flex items-center justify-center gap-3 py-6">

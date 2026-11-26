@@ -79,7 +79,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </p>
       )}
       <div className={FORM_LABEL}>
-        <Label htmlFor="login-email" className="text-xs font-semibold">
+        <Label htmlFor="login-email" className="text-muted-strong text-[13px] font-semibold">
           이메일
         </Label>
         <Input
@@ -98,7 +98,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         )}
       </div>
       <div className={FORM_LABEL}>
-        <Label htmlFor="login-password" className="text-xs font-semibold">
+        <Label htmlFor="login-password" className="text-muted-strong text-[13px] font-semibold">
           비밀번호
         </Label>
         <Input

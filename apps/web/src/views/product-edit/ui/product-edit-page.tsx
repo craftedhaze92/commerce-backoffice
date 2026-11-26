@@ -45,13 +45,15 @@ function CreateProduct() {
   }, [forbidden, router]);
 
   return (
-    <section className="flex flex-col gap-4">
-      <h1 className="text-lg font-bold">상품 등록</h1>
+    <section className="flex flex-col gap-6">
+      <h1 className="text-title">상품 등록</h1>
       {canWrite ? (
-        <ProductForm
-          mode="create"
-          onSubmitted={(detail) => router.replace(`/products/${detail.id}`)}
-        />
+        <div className="sheet max-w-3xl p-4 md:p-8">
+          <ProductForm
+            mode="create"
+            onSubmitted={(detail) => router.replace(`/products/${detail.id}`)}
+          />
+        </div>
       ) : (
         !forbidden && <FormSkeleton />
       )}
@@ -71,7 +73,7 @@ function EditProduct({ id }: { id: string }) {
   // 권한을 알기 전에 폼을 그리면 매니저에게도 읽기 전용 화면이 잠깐 보인다
   if (product.isPending || me.isPending) {
     return (
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-6">
         <Skeleton className="h-7 w-48" />
         <FormSkeleton />
       </section>
@@ -100,9 +102,9 @@ function EditProduct({ id }: { id: string }) {
 
   const detail = product.data;
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-6">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-bold">{detail.name}</h1>
+        <h1 className="text-title">{detail.name}</h1>
         {canWrite && (
           <DeleteProductButton
             id={detail.id}
@@ -111,14 +113,19 @@ function EditProduct({ id }: { id: string }) {
           />
         )}
       </header>
-      <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
-      <section aria-labelledby="inventory-heading" className="flex max-w-3xl flex-col gap-3">
+      <div className="sheet max-w-3xl p-4 md:p-8">
+        <ProductForm key={detail.id} mode="edit" initial={detail} readOnly={!canWrite} />
+      </div>
+      <section
+        aria-labelledby="inventory-heading"
+        className="sheet flex max-w-3xl flex-col gap-4 p-4 md:p-8"
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h2 id="inventory-heading" className="text-base font-bold">
+            <h2 id="inventory-heading" className="text-section">
               재고
             </h2>
-            <span className="text-sm">
+            <span className="text-muted-strong text-[15px] font-medium">
               현재 재고 {detail.stock}개 · 안전 재고 {detail.safetyStock}개
             </span>
             {detail.isLowStock && <Badge variant="destructive">부족</Badge>}

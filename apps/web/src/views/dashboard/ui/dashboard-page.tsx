@@ -17,19 +17,19 @@ export function DashboardPage() {
   const [{ days }, setParams] = useUrlState(dashboardSchema);
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-bold">대시보드</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-title">대시보드</h1>
+          <p className="text-muted-foreground text-[15px] font-medium">
             {me ? `${me.name}님, 안녕하세요` : '안녕하세요'}
             {summary ? ` · 기준일 ${summary.today}` : ''}
           </p>
         </div>
         <ToggleGroup
           type="single"
-          variant="outline"
           size="sm"
+          className="bg-card rounded-xl p-1"
           aria-label="차트 기간"
           value={String(days)}
           onValueChange={(v) => {

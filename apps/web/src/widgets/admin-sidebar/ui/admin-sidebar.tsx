@@ -37,7 +37,7 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <span className="px-2 text-base font-bold">커머스 백오피스</span>
+        <span className="px-3 py-2 text-lg font-bold tracking-tight">커머스 백오피스</span>
       </SidebarHeader>
       <SidebarContent>
         {isPending || !me ? (
@@ -75,9 +75,9 @@ export function AdminSidebar() {
       </SidebarContent>
       <SidebarFooter>
         {me && (
-          <div className="flex items-center gap-2 px-2">
-            <span className="truncate text-sm font-semibold">{me.name}</span>
-            <Badge variant="outline">{ROLE_LABEL[me.role]}</Badge>
+          <div className="flex items-center gap-2 px-3">
+            <span className="truncate text-[15px] font-semibold">{me.name}</span>
+            <Badge variant="secondary">{ROLE_LABEL[me.role]}</Badge>
           </div>
         )}
         <LogoutButton />

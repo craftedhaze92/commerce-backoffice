@@ -22,7 +22,7 @@ export function RecentOrders() {
   return (
     <Card className="px-(--card-spacing)">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[15px] font-bold">최근 주문</h2>
+        <h2 className="text-section">최근 주문</h2>
         <Link href="/orders" className="text-muted-foreground text-xs hover:underline">
           전체 보기
         </Link>
