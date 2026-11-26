@@ -11,6 +11,7 @@ import {
 } from '@/features/product-filter';
 import { ProductColumnMenu, ProductTable } from '@/widgets/product-table';
 import { buttonVariants } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { DataPagination } from '@/shared/ui/data-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { cn } from '@/shared/lib/utils';
@@ -25,10 +26,12 @@ export function ProductListPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3 whitespace-nowrap">
           <h1 className="text-title">상품</h1>
-          {meta && (
+          {meta ? (
             <span className="text-muted-foreground text-[15px] font-medium tabular-nums">
               총 {meta.total.toLocaleString('ko-KR')}개
             </span>
+          ) : (
+            <Skeleton aria-hidden className="h-4 w-16 self-center" />
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -56,7 +59,7 @@ export function ProductListPage() {
         <div className="flex items-center justify-between gap-3">
           <Select value={String(params.size)} onValueChange={(v) => setParams({ size: Number(v) })}>
             <SelectTrigger aria-label="페이지 크기" size="sm" className="w-28">
-              <SelectValue />
+              <SelectValue>{params.size}개씩</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {PRODUCT_PAGE_SIZES.map((s) => (

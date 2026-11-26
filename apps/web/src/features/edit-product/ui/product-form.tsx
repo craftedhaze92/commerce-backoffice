@@ -11,6 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { FORM_FIELD, FORM_LABEL } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/shared/lib/utils';
@@ -161,7 +162,13 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
                 disabled={readOnly}
               >
                 <SelectTrigger {...a11y('categoryId')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue placeholder="카테고리 선택" />
+                  <SelectValue placeholder="카테고리 선택">
+                    {field.value
+                      ? (categories.data?.find((c) => c.id === field.value)?.name ?? (
+                          <Skeleton aria-hidden className="h-4 w-16" />
+                        ))
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {categories.data?.map((c) => (
@@ -181,7 +188,7 @@ export function ProductForm({ mode, initial, readOnly = false, onSubmitted }: Pr
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
                 <SelectTrigger {...a11y('status')} className={cn(FORM_FIELD, 'w-full')}>
-                  <SelectValue />
+                  <SelectValue>{PRODUCT_STATUS_LABEL[field.value]}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(ProductStatus).map((s) => (

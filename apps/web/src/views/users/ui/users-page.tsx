@@ -12,7 +12,7 @@ import { kst } from '@/shared/lib/dayjs';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DataPagination } from '@/shared/ui/data-pagination';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows } from '@/shared/ui/table-skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
 export function UsersPage() {
@@ -50,13 +50,11 @@ export function UsersPage() {
           </TableHeader>
           <TableBody>
             {users.isPending ? (
-              [0, 1, 2].map((i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={6}>
-                    <Skeleton className="h-5 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))
+              <TableSkeletonRows
+                rows={3}
+                testId="user-skeleton-row"
+                cells={['text', 'text', 'badge', 'badge', 'text', 'badge']}
+              />
             ) : users.isError ? (
               !apiForbidden && (
                 <TableRow>

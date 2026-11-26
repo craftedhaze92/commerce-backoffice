@@ -24,7 +24,7 @@ function SidebarSkeleton() {
   return (
     <div data-testid="sidebar-skeleton" className="flex flex-col gap-2 p-2">
       {[0, 1, 2].map((i) => (
-        <Skeleton key={i} className="h-8 w-full" />
+        <Skeleton key={i} className="h-11 w-full rounded-lg" />
       ))}
     </div>
   );
@@ -74,6 +74,15 @@ export function AdminSidebar() {
         )}
       </SidebarContent>
       <SidebarFooter>
+        {isPending && (
+          <div aria-hidden className="flex items-center gap-3 px-3 py-2">
+            <Skeleton className="size-9 rounded-full" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          </div>
+        )}
         {me && (
           <div className="flex items-center gap-3 px-3 py-2">
             <span

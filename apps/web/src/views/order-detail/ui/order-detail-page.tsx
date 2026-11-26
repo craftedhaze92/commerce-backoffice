@@ -10,6 +10,7 @@ import { formatWon } from '@/shared/lib/format-won';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows } from '@/shared/ui/table-skeleton';
 import {
   Table,
   TableBody,
@@ -25,9 +26,30 @@ export function OrderDetailPage({ id }: { id: string }) {
 
   if (order.isPending) {
     return (
-      <section className="flex flex-col gap-4" aria-busy="true">
-        <Skeleton className="h-7 w-64" />
-        <Skeleton className="h-40 w-full" />
+      <section className="flex flex-col gap-6" aria-busy="true" aria-label="주문 불러오는 중">
+        <header className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-6 w-12 rounded-md" />
+          </div>
+          <Skeleton className="h-4 w-56" />
+        </header>
+        <div className="sheet p-4 md:p-6">
+          <Table>
+            <TableBody>
+              <TableSkeletonRows rows={3} cells={['text', 'text', 'number', 'number', 'number']} />
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-24 rounded-lg" />
+          <Skeleton className="h-10 w-24 rounded-lg" />
+        </div>
+        <div className="sheet flex flex-col gap-4 p-4 md:p-6">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </section>
     );
   }

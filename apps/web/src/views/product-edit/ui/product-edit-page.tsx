@@ -24,12 +24,23 @@ export function ProductEditPage({ id }: ProductEditPageProps) {
   return id === undefined ? <CreateProduct /> : <EditProduct id={id} />;
 }
 
+/** 상품 폼과 같은 2열 라벨·입력 배치의 로딩 자리. 불러온 뒤 화면이 흔들리지 않게 크기를 맞춘다. */
 function FormSkeleton() {
   return (
-    <div className="flex max-w-3xl flex-col gap-4" aria-busy="true">
-      {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-10 w-full" />
-      ))}
+    <div className="sheet flex max-w-3xl flex-col gap-5 p-4 md:p-8" aria-busy="true">
+      <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <Skeleton className="h-3.5 w-14" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-3.5 w-14" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+      <Skeleton className="ml-auto h-12 w-20 rounded-xl" />
     </div>
   );
 }

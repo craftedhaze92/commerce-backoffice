@@ -6,6 +6,7 @@ import { useCategories } from '@/entities/category';
 import { PRODUCT_STATUS_LABEL, type ProductListParams } from '@/entities/product';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Toggle } from '@/shared/ui/toggle';
 import type { ProductListPatch } from '../model/product-list-params';
@@ -33,7 +34,13 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
         onValueChange={(v) => onChange({ categoryId: v === ALL ? undefined : v })}
       >
         <SelectTrigger aria-label="카테고리" className="w-40">
-          <SelectValue placeholder="카테고리" />
+          <SelectValue placeholder="카테고리">
+            {params.categoryId === undefined
+              ? '전체'
+              : (categories.data?.find((c) => c.id === params.categoryId)?.name ?? (
+                  <Skeleton aria-hidden className="h-4 w-14" />
+                ))}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>전체</SelectItem>
@@ -49,7 +56,9 @@ export function ProductFilterBar({ params, onChange }: ProductFilterBarProps) {
         onValueChange={(v) => onChange({ status: v === ALL ? undefined : (v as ProductStatus) })}
       >
         <SelectTrigger aria-label="상태" className="w-32">
-          <SelectValue placeholder="상태" />
+          <SelectValue placeholder="상태">
+            {params.status === undefined ? '전체' : PRODUCT_STATUS_LABEL[params.status]}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>전체</SelectItem>

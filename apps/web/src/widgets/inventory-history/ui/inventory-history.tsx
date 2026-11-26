@@ -8,10 +8,9 @@ import { cn } from '@/shared/lib/utils';
 import { kst } from '@/shared/lib/dayjs';
 import { Button } from '@/shared/ui/button';
 import { DataPagination } from '@/shared/ui/data-pagination';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows } from '@/shared/ui/table-skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 
-const SKELETON_ROWS = [0, 1, 2, 3, 4];
 const COLUMNS = ['일시', '사유', '증감', '조정 후 재고', '처리자', '비고'];
 
 function signed(delta: number): string {
@@ -50,13 +49,10 @@ export function InventoryHistory({ productId }: { productId: string }) {
         </TableHeader>
         <TableBody>
           {history.isPending ? (
-            SKELETON_ROWS.map((i) => (
-              <TableRow key={i} data-testid="inventory-skeleton-row" aria-busy="true">
-                <TableCell colSpan={COLUMNS.length}>
-                  <Skeleton className="h-8 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
+            <TableSkeletonRows
+              testId="inventory-skeleton-row"
+              cells={['text', 'badge', 'number', 'number', 'text', 'text']}
+            />
           ) : history.isError ? (
             <TableRow>
               <TableCell colSpan={COLUMNS.length}>

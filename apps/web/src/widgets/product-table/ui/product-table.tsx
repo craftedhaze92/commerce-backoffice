@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { ProductListItem } from '@bo/contracts';
 import { Button } from '@/shared/ui/button';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { TableSkeletonRows, type SkeletonCellKind } from '@/shared/ui/table-skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { cn } from '@/shared/lib/utils';
 import { useColumnVisibility, useHydrateColumnVisibility } from '../model/column-visibility-store';
@@ -26,7 +26,14 @@ interface ProductTableProps {
   onSortChange: (next: SortValue) => void;
 }
 
-const SKELETON_ROWS = [0, 1, 2, 3, 4];
+/** 로딩 중 각 컬럼 자리에 그릴 모양. 실제 셀과 같은 정렬·크기로 맞춘다. */
+const SKELETON_CELL: Record<string, SkeletonCellKind> = {
+  thumbnail: 'thumb',
+  name: 'twoLine',
+  price: 'number',
+  stock: 'number',
+  status: 'badge',
+};
 
 export function ProductTable({
   data,
@@ -101,13 +108,10 @@ export function ProductTable({
         </TableHeader>
         <TableBody>
           {isPending ? (
-            SKELETON_ROWS.map((i) => (
-              <TableRow key={i} data-testid="product-skeleton-row" aria-busy="true">
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-10 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
+            <TableSkeletonRows
+              testId="product-skeleton-row"
+              cells={table.getVisibleLeafColumns().map((c) => SKELETON_CELL[c.id] ?? 'text')}
+            />
           ) : isError ? (
             <TableRow>
               <TableCell colSpan={colSpan}>

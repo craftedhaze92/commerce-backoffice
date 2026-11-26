@@ -4,10 +4,9 @@ import Link from 'next/link';
 import { useProducts } from '@/entities/product';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/skeleton';
+import { ListSkeleton } from '@/shared/ui/table-skeleton';
 
 const SIZE = 5;
-const SKELETON_KEYS = [0, 1, 2, 3, 4];
 
 export function LowStockTable() {
   const { data, isPending, isError, refetch } = useProducts({
@@ -38,11 +37,7 @@ export function LowStockTable() {
           </Button>
         </div>
       ) : isPending || !data ? (
-        <div data-testid="low-stock-skeleton" aria-busy="true" className="flex flex-col gap-3">
-          {SKELETON_KEYS.map((k) => (
-            <Skeleton key={k} className="h-9 w-full" />
-          ))}
-        </div>
+        <ListSkeleton testId="low-stock-skeleton" />
       ) : data.items.length === 0 ? (
         <p className="text-muted-foreground py-6 text-center text-[13px]">
           재고 부족 상품이 없습니다
