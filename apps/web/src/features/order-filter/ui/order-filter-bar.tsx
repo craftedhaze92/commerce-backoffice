@@ -3,9 +3,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { ORDER_LIMITS, OrderStatus } from '@bo/contracts';
 import { ORDER_STATUS_LABEL, type OrderListParams } from '@/entities/order';
-import { kstPreset, type KstPresetKind } from '@/shared/lib/date-range';
+import { kstPreset, kstToday, type KstPresetKind } from '@/shared/lib/date-range';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { DatePicker } from '@/shared/ui/date-picker';
 import { Input } from '@/shared/ui/input';
 import type { OrderListPatch } from '../model/order-list-params';
 
@@ -149,8 +150,10 @@ function DateRange({ from, to, onCommit }: DateRangeProps) {
     setError(null);
   }
 
-  function change(key: 'from' | 'to', value: string) {
-    const next = value === '' ? undefined : value;
+  // 미래 날짜는 아직 주문이 없으므로 달력에서 고를 수 없게 한다(KST 기준 오늘까지)
+  const today = kstToday();
+
+  function change(key: 'from' | 'to', next: string | undefined) {
     const lo = key === 'from' ? next : from;
     const hi = key === 'to' ? next : to;
     if (lo && hi && lo > hi) {
@@ -164,26 +167,27 @@ function DateRange({ from, to, onCommit }: DateRangeProps) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          type="date"
-          aria-label="시작일"
-          className="w-40"
-          value={from ?? ''}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          onChange={(e) => change('from', e.target.value)}
+        <DatePicker
+          label="시작일"
+          placeholder="시작일"
+          value={from}
+          max={to ?? today}
+          invalid={error !== null}
+          describedBy={error ? errorId : undefined}
+          onChange={(v) => change('from', v)}
         />
         <span aria-hidden className="text-muted-foreground">
           ~
         </span>
-        <Input
-          type="date"
-          aria-label="종료일"
-          className="w-40"
-          value={to ?? ''}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          onChange={(e) => change('to', e.target.value)}
+        <DatePicker
+          label="종료일"
+          placeholder="종료일"
+          value={to}
+          min={from}
+          max={today}
+          invalid={error !== null}
+          describedBy={error ? errorId : undefined}
+          onChange={(v) => change('to', v)}
         />
         {PRESETS.map((p) => {
           const range = kstPreset(p.kind);

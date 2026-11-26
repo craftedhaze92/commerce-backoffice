@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isValidDateString, kstPreset } from './date-range';
+import {
+  dateStringToDate,
+  dateToDateString,
+  isValidDateString,
+  kstPreset,
+  kstToday,
+} from './date-range';
 
 // UTC 2026-11-20 16:00 = KST 2026-11-21 01:00
 const NOW = new Date('2026-11-20T16:00:00Z');
@@ -33,4 +39,24 @@ describe('isValidDateString', () => {
       expect(isValidDateString(s)).toBe(false);
     },
   );
+});
+
+describe('kstToday', () => {
+  it('uses the KST calendar date, not UTC', () => {
+    expect(kstToday(NOW)).toBe('2026-11-21');
+  });
+});
+
+describe('dateStringToDate / dateToDateString', () => {
+  it('maps YYYY-MM-DD to local midnight of that calendar day', () => {
+    const d = dateStringToDate('2026-02-03');
+    expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([2026, 1, 3, 0]);
+  });
+
+  it('round-trips and zero-pads', () => {
+    for (const s of ['2026-01-01', '2026-11-30', '2024-02-29']) {
+      expect(dateToDateString(dateStringToDate(s))).toBe(s);
+    }
+    expect(dateToDateString(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
 });

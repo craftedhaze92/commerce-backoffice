@@ -189,7 +189,7 @@
    * Tailwind v4는 버튼의 기본 cursor를 default로 둔다. 누를 수 있는 요소는 모두 pointer,
    * 비활성 요소는 not-allowed로 맞춘다. 개별 컴포넌트에 cursor 클래스를 흩뿌리지 않는다.
    */
-  button:not(:disabled),
+  button:not(:disabled):not([aria-disabled='true']),
   [role='button']:not([aria-disabled='true']),
   [role='tab']:not([aria-disabled='true']),
   [role='menuitem']:not([data-disabled]),
@@ -207,6 +207,7 @@
     cursor: pointer;
   }
   button:disabled,
+  button[aria-disabled='true'],
   [role='button'][aria-disabled='true'],
   [role='tab'][aria-disabled='true'],
   [role='combobox']:disabled,
